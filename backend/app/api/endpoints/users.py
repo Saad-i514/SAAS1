@@ -9,7 +9,6 @@ router = APIRouter()
 @router.post("/company-admin", response_model=schemas.user.User)
 def create_company_and_admin(
     user_in: schemas.user.UserCreate,
-    company_name: str,
     db: Session = Depends(deps.get_db),
     current_super_admin: models.User = Depends(deps.get_current_super_admin),
 ):
@@ -22,7 +21,10 @@ def create_company_and_admin(
             status_code=400,
             detail="The user with this username already exists in the system",
         )
-    
+    company_name = user_in.company_name
+    if not company_name:
+        raise HTTPException(status_code=400, detail="Company name is required")
+
     # Create Company
     company = models.Company(name=company_name)
     db.add(company)

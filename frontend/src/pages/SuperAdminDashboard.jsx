@@ -21,7 +21,15 @@ function SuperAdminDashboard() {
             setFormData({ company_name: '', email: '', password: '' });
             setShowAddForm(false);
         } catch (err) {
-            setError(err.response?.data?.detail || 'Failed to create company');
+            let errorMsg = 'Failed to create company';
+            if (err.response?.data?.detail) {
+                if (typeof err.response.data.detail === 'string') {
+                    errorMsg = err.response.data.detail;
+                } else if (Array.isArray(err.response.data.detail)) {
+                    errorMsg = err.response.data.detail[0].msg || 'Validation Error';
+                }
+            }
+            setError(errorMsg);
         }
     };
 
