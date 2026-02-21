@@ -41,12 +41,23 @@ This is a responsive, multi-tenant SaaS application built with **React (Vite) + 
    alembic upgrade head
    ```
 
-### 2. Backend Deployment (Render / Railway / Heroku)
-Since FastAPI requires a Python environment, it cannot be hosted directly on Supabase edge functions natively without wrappers. You can deploy it for free on **Render.com**.
-1. Create a "Web Service" tied to your GitHub Repo.
-2. Build Command: `pip install -r requirements.txt`
-3. Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Environment Variables: Add `DATABASE_URL` pointing to your Supabase DB.
+### 2. Backend Deployment (Koyeb / Railway)
+Since FastAPI requires a Python environment, it cannot be hosted directly on Supabase edge functions natively without wrappers. 
+
+**Koyeb (Recommended Free Tier - No Card Required)**:
+1. Create a free account at [Koyeb.com](https://www.koyeb.com/).
+2. Create a high-performance **Web Service** tied to your GitHub Repo.
+3. Configure the Builder: Choose **Buildpack** (it will auto-detect Python).
+4. Run Command (Override): `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+5. Ports: Change the port from `8080` to `8000` (or leave it as `$PORT`).
+6. Environment Variables: Add `DATABASE_URL` pointing to your Supabase PostgreSQL DB.
+7. Click Deploy!
+
+**Railway (Alternative)**:
+1. Go to [Railway.app](https://railway.app/).
+2. Click "New Project" -> "Deploy from GitHub Repo".
+3. Railway will automatically detect the Python FastAPI setup and build it.
+4. Add the `DATABASE_URL` variable to your project variables.
 
 ### 3. Frontend Deployment (Vercel / Netlify / GitHub Pages)
 1. Push your code to GitHub.
