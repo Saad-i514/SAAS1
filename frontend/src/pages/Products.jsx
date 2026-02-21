@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Plus, Search, Edit2, Trash2, Save, X, Activity } from 'lucide-react';
 import DynamicColumnManager from '../components/DynamicColumnManager';
+import TransactionModal from '../components/TransactionModal';
 
 function Products() {
     const [products, setProducts] = useState([]);
@@ -231,7 +232,7 @@ function Products() {
                                                 ) : (
                                                     <div className={`p-4 ${field === 'article_no' ? 'font-medium text-gray-900' : ''}`}>
                                                         {field === 'product_price' || field === 'sale_price' ? (
-                                                            <span className="font-mono">${p[field].toFixed(2)}</span>
+                                                            <span className="font-mono">${Number(p[field] || 0).toFixed(2)}</span>
                                                         ) : field === 'in_hand_qty' ? (
                                                             <span className={`inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none rounded ${p.in_hand_qty > 10 ? 'bg-green-100 text-green-800' : p.in_hand_qty > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{p.in_hand_qty}</span>
                                                         ) : field === 'status' ? (
