@@ -41,29 +41,30 @@ This is a responsive, multi-tenant SaaS application built with **React (Vite) + 
    alembic upgrade head
    ```
 
-### 2. Backend Deployment (Koyeb / Railway)
-Since FastAPI requires a Python environment, it cannot be hosted directly on Supabase edge functions natively without wrappers. 
+### 2. Backend Deployment (Google Cloud Run)
+To deploy the FastAPI backend to Google Cloud Run, we have containerized it using Docker. It provides a generous free tier of 2 million requests/month.
 
-**Koyeb (Recommended Free Tier - No Card Required)**:
-1. Create a free account at [Koyeb.com](https://www.koyeb.com/).
-2. Create a high-performance **Web Service** tied to your GitHub Repo.
-3. Configure the Builder: Choose **Buildpack** (it will auto-detect Python).
-4. Run Command (Override): `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-5. Ports: Change the port from `8080` to `8000` (or leave it as `$PORT`).
-6. Environment Variables: Add `DATABASE_URL` pointing to your Supabase PostgreSQL DB.
-7. Click Deploy!
-
-**Railway (Alternative)**:
-1. Go to [Railway.app](https://railway.app/).
-2. Click "New Project" -> "Deploy from GitHub Repo".
-3. Railway will automatically detect the Python FastAPI setup and build it.
-4. Add the `DATABASE_URL` variable to your project variables.
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/) and create a new project.
+2. Enable the **Cloud Run API** and **Cloud Build API**.
+3. Go to **Cloud Run** and click **Create Service** (or "Deploy Container" -> "Service").
+4. Select **Continuously deploy new revisions from a source repository**.
+5. Connect your GitHub account and select your `Saad-i514/SAAS1` repository.
+6. In the Build Configuration:
+   - Branch: `^main$`
+   - Build Type: **Dockerfile**
+   - Source location: `/backend/Dockerfile`
+7. In the Service settings:
+   - Authentication: Select **Allow unauthenticated invocations**.
+8. Scroll down to **Container, Variables & Secrets**, click the **Variables** tab:
+   - Add Name: `DATABASE_URL`
+   - Add Value: `postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres` (Make sure you use the IPv4 Pooler URL, port 5432).
+9. Click **Create** to deploy. Once finished, copy the URL it provides (e.g. `https://saas-backend-xxxxx-uc.a.run.app`).
 
 ### 3. Frontend Deployment (Vercel / Netlify / GitHub Pages)
 1. Push your code to GitHub.
 2. Go to Vercel and import the repo.
 3. Framework Preset: `Vite`
-4. Add Environment Variable: `VITE_API_URL` pointing to your deployed Backend URL (e.g., `https://your-backend.onrender.com/api/v1`).
+4. Add Environment Variable: `VITE_API_URL` pointing to your deployed Google Cloud Run URL with `/api/v1` appended (e.g., `https://saas-backend-xxxxx-uc.a.run.app/api/v1`).
 5. Deploy!
 
 ## GitHub Actions CI/CD Pipeline
