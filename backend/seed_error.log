@@ -1,0 +1,135 @@
+C:\Users\msaad\Documents\SAAS_PROD\backend\seed_data_test.py:77: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.utcnow()
+Generating mock transactions...
+Traceback (most recent call last):
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2125, in _exec_insertmany_context
+    dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~^
+        cursor,
+        ^^^^^^^
+    ...<2 lines>...
+        context,
+        ^^^^^^^^
+    )
+    ^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InvalidTextRepresentation: invalid input value for enum transactiontypeenum: "RETURN"
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\seed_data_test.py", line 150, in <module>
+    seed_db()
+    ~~~~~~~^^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\seed_data_test.py", line 144, in seed_db
+    db.commit()
+    ~~~~~~~~~^^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1311, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1286, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4331, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4466, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4427, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1143, in _emit_insert_statements
+    result = connection.execute(
+        statement, multiparams, execution_options=execution_options
+    )
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1844, in _execute_context
+    return self._exec_insertmany_context(dialect, context)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2133, in _exec_insertmany_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e,
+        ^^
+    ...<4 lines>...
+        is_sub_exec=True,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2125, in _exec_insertmany_context
+    dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~^
+        cursor,
+        ^^^^^^^
+    ...<2 lines>...
+        context,
+        ^^^^^^^^
+    )
+    ^
+  File "C:\Users\msaad\Documents\SAAS_PROD\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input value for enum transactiontypeenum: "RETURN"
+
+[SQL: INSERT INTO transactions (company_id, supplier_id, transaction_id, order_no, type, date, previous_credit, debit, current_credit, discount, product_name, quantity, unit_price, customer_name, payment_term) SELECT p0::INTEGER, p1::INTEGER, p2::VARCHAR,  ... 155616 characters truncated ... p12, p13, p14, sen_counter) ORDER BY sen_counter RETURNING transactions.id, transactions.id AS id__1]
+[parameters: {'discount__0': 0.0, 'type__0': 'PURCHASE', 'customer_name__0': None, 'debit__0': 2196.0, 'company_id__0': 1, 'payment_term__0': 'Cash', 'transaction_id__0': 'BFBDE322', 'previous_credit__0': 0.0, 'supplier_id__0': 8, 'product_name__0': 'Olive Oil Extra Virgin 1L', 'date__0': datetime.datetime(2025, 12, 21, 18, 49, 33, 862989), 'order_no__0': None, 'quantity__0': 183, 'current_credit__0': 0.0, 'unit_price__0': 12.0, 'discount__1': 0.0, 'type__1': 'PURCHASE', 'customer_name__1': None, 'debit__1': 2430.0, 'company_id__1': 1, 'payment_term__1': 'Cash', 'transaction_id__1': 'DDD0168F', 'previous_credit__1': 0.0, 'supplier_id__1': 8, 'product_name__1': 'Avocado Oil Premium 500ml', 'date__1': datetime.datetime(2025, 12, 21, 18, 49, 33, 862989), 'order_no__1': None, 'quantity__1': 270, 'current_credit__1': 0.0, 'unit_price__1': 9.0, 'discount__2': 0.0, 'type__2': 'PURCHASE', 'customer_name__2': None, 'debit__2': 4155.0, 'company_id__2': 1, 'payment_term__2': 'Cash', 'transaction_id__2': '80FDA754', 'previous_credit__2': 0.0, 'supplier_id__2': 8, 'product_name__2': 'Coconut Oil Organic 1L', 'date__2': datetime.datetime(2025, 12, 21, 18, 49, 33, 862989), 'order_no__2': None, 'quantity__2': 277, 'current_credit__2': 0.0, 'unit_price__2': 15.0, 'discount__3': 0.0, 'type__3': 'PURCHASE', 'customer_name__3': None, 'debit__3': 1285.0, 'company_id__3': 1 ... 7265 parameters truncated ... 'date__487': datetime.datetime(2026, 3, 22, 12, 15, 33, 862989), 'order_no__487': None, 'quantity__487': 3, 'current_credit__487': 0.0, 'unit_price__487': 22.0, 'discount__488': 0.0, 'type__488': 'SALE', 'customer_name__488': None, 'debit__488': 260.0, 'company_id__488': 1, 'payment_term__488': 'Card', 'transaction_id__488': 'AF074654', 'previous_credit__488': 0.0, 'supplier_id__488': None, 'product_name__488': 'Ocean Breeze 100ml', 'date__488': datetime.datetime(2026, 3, 22, 12, 16, 33, 862989), 'order_no__488': None, 'quantity__488': 4, 'current_credit__488': 0.0, 'unit_price__488': 65.0, 'discount__489': 0.0, 'type__489': 'SALE', 'customer_name__489': None, 'debit__489': 195.0, 'company_id__489': 1, 'payment_term__489': 'Card', 'transaction_id__489': 'B727E7A9', 'previous_credit__489': 0.0, 'supplier_id__489': None, 'product_name__489': 'Ocean Breeze 100ml', 'date__489': datetime.datetime(2026, 3, 22, 5, 32, 33, 862989), 'order_no__489': None, 'quantity__489': 3, 'current_credit__489': 0.0, 'unit_price__489': 65.0, 'discount__490': 0.0, 'type__490': 'SALE', 'customer_name__490': None, 'debit__490': 30.0, 'company_id__490': 1, 'payment_term__490': 'Cash', 'transaction_id__490': 'AF88FA98', 'previous_credit__490': 0.0, 'supplier_id__490': None, 'product_name__490': 'Raw Honey 1kg', 'date__490': datetime.datetime(2026, 3, 22, 8, 27, 33, 862989), 'order_no__490': None, 'quantity__490': 2, 'current_credit__490': 0.0, 'unit_price__490': 15.0}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)

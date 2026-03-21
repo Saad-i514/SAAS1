@@ -20,4 +20,18 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // If we receive a 401 or 403, and it's not the login endpoint itself, 
+    // the token is likely invalid or expired. Force a logout.
+    if ((error.response?.status === 401 || error.response?.status === 403) && !window.location.pathname.includes('/login')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;

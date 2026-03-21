@@ -8,6 +8,7 @@ class ProductBase(BaseModel):
     product_price: float
     sale_price: float
     in_hand_qty: Optional[int] = 0
+    category: Optional[str] = None
     status: Optional[str] = "Active"
     dynamic_data: Optional[dict] = {}
 
@@ -19,6 +20,7 @@ class ProductUpdate(BaseModel):
     product_price: Optional[float] = None
     sale_price: Optional[float] = None
     in_hand_qty: Optional[int] = None
+    category: Optional[str] = None
     status: Optional[str] = None
     dynamic_data: Optional[dict] = None
 

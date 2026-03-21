@@ -64,6 +64,7 @@ class Product(Base):
     product_price = Column(Float, default=0.0)
     sale_price = Column(Float, default=0.0)
     in_hand_qty = Column(Integer, default=0)
+    category = Column(String, index=True, nullable=True)
     status = Column(String, default="Active")
     dynamic_data = Column(JSONB, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -76,6 +77,7 @@ class TransactionTypeEnum(str, enum.Enum):
     PAYMENT = "payment"
     SALE = "sale"
     REVERSE = "reverse"
+    RETURN = "return"
 
 class Transaction(Base):
     __tablename__ = "transactions"

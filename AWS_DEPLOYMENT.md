@@ -45,14 +45,28 @@ AWS offers 750 hours/month of `t2.micro` or `t3.micro` EC2 instances for the fir
    - Select **Upload your code**.
    - Zip your entire `backend` directory (ensure `Dockerfile`, `requirements.txt`, and the `app/` folder are at the root of the ZIP file).
    - Click **Local file** and upload the ZIP.
-6. Click **Configure more options**.
-7. Under **Instances**, ensure the instance type is set to `t2.micro` or `t3.micro` to stay within the AWS Free Tier.
-8. Under **Software**, add your environment variables:
-   - `DATABASE_URL`: Your Supabase connection string from Step 1.
-   - `CORS_ORIGINS`: `*` (or your future CloudFront domain).
-   - `SECRET_KEY`: A random secure string.
-9. Click **Create app**. 
-10. AWS will create an environment. This takes 5-10 minutes. Once done, copy the **Environment URL** (e.g., `http://saasbackend-env.eba-xxxx.us-east-1.elasticbeanstalk.com`). You will use this as your API URL for the frontend.
+6. Under **Presets**, ensure **Single instance (free tier eligible)** is selected.
+7. Click **Next** at the bottom of the page.
+8. On **Step 2 (Configure service access)**, you need two IAM roles. If you don't have them in the dropdowns, you must create them:
+   - **Service role**: Click the **Create role** link. This opens a new tab in the IAM console. 
+     1. Choose **AWS service** as the trusted entity.
+     2. Select **Elastic Beanstalk** from the use cases, then select the **Elastic Beanstalk - Environment** option and click Next.
+     3. Keep the default permissions, click Next, name the role `aws-elasticbeanstalk-service-role`, and create it.
+     4. Go back to your Elastic Beanstalk tab, click the refresh icon `↻`, and select the new role.
+   - **EC2 instance profile**: Click the second **Create role** link for the instance profile.
+     1. Choose **AWS service**, select **EC2**, and click Next.
+     2. In permissions, search for and check these three policies: `AWSElasticBeanstalkWebTier`, `AWSElasticBeanstalkWorkerTier`, and `AWSElasticBeanstalkMulticontainerDocker`.
+     3. Click Next, name it `aws-elasticbeanstalk-ec2-role`, and create it.
+     4. Go back to Elastic Beanstalk, click the refresh icon `↻`, and select it.
+   - Once both are selected, click **Next**.
+9. On **Step 3 (Networking...)**, select a default VPC and at least one public subnet, ensure "Activated" is checked under "Public IP address", and click **Next**.
+10. On **Step 4 (Configure instance traffic and compute)**, scroll to **EC2 instance type** and ensure `t2.micro` or `t3.micro` is selected to stay within the AWS Free Tier. Click **Next**.
+11. On **Step 5 (Configure updates, monitoring, and logging)**, scroll down to the **Environment properties** section and add:
+    - **Name**: `DATABASE_URL` | **Value**: Your Supabase connection string
+    - **Name**: `CORS_ORIGINS` | **Value**: `*` (or your future CloudFront domain)
+    - **Name**: `SECRET_KEY` | **Value**: A random secure string
+12. Click **Next**, review your settings, and click **Submit**.
+13. AWS will now create the environment. This takes 5-10 minutes. Once done, copy the **Environment URL** (e.g., `http://saasbackend-env.eba-xxxx.us-east-1.elasticbeanstalk.com`). You will use this as your API URL for the frontend.
 
 ---
 

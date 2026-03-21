@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Plus, Search, Edit2, Trash2, Save, X, Activity } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Activity, Filter, PackageOpen } from 'lucide-react';
 import DynamicColumnManager from '../components/DynamicColumnManager';
 import TransactionModal from '../components/TransactionModal';
 
@@ -11,12 +11,12 @@ function Products() {
     const [customColumns, setCustomColumns] = useState([]);
     const [columnFilters, setColumnFilters] = useState({});
 
-    const [showAddForm, setShowAddForm] = useState(false);
+    const [isAddOrEditModalOpen, setIsAddOrEditModalOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState(null);
     const [showTransactionModal, setShowTransactionModal] = useState(false);
-    const [formData, setFormData] = useState({ article_no: '', name: '', product_price: '', sale_price: '', in_hand_qty: '', status: 'Active', dynamic_data: {} });
+    
+    const [formData, setFormData] = useState({ article_no: '', name: '', category: '', product_price: '', sale_price: '', in_hand_qty: '', status: 'Active', dynamic_data: {} });
 
-    const [editingCell, setEditingCell] = useState({ id: null, field: null });
-    const [editValue, setEditValue] = useState('');
     const [userRole, setUserRole] = useState('Operator');
 
     useEffect(() => {
@@ -34,6 +34,7 @@ function Products() {
     };
 
     const fetchProducts = async () => {
+        setLoading(true);
         try {
             const { data } = await api.get('/products/');
             setProducts(data);
@@ -45,50 +46,47 @@ function Products() {
         fetchProducts();
     }, []);
 
-    const handleAdd = async (e) => {
+    const openModal = (product = null) => {
+        if (product) {
+            setFormData({
+                article_no: product.article_no || '',
+                name: product.name || '',
+                category: product.category || '',
+                product_price: product.product_price || '',
+                sale_price: product.sale_price || '',
+                in_hand_qty: product.in_hand_qty || '',
+                status: product.status || 'Active',
+                dynamic_data: product.dynamic_data || {}
+            });
+            setEditingProduct(product);
+        } else {
+            setFormData({ article_no: '', name: '', category: '', product_price: '', sale_price: '', in_hand_qty: '', status: 'Active', dynamic_data: {} });
+            setEditingProduct(null);
+        }
+        setIsAddOrEditModalOpen(true);
+    }
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const payload = { ...formData, product_price: parseFloat(formData.product_price), sale_price: parseFloat(formData.sale_price), in_hand_qty: parseInt(formData.in_hand_qty || 0) };
-            const { data } = await api.post('/products/', payload);
-            setProducts([...products, data]);
-            setShowAddForm(false);
-            setFormData({ article_no: '', name: '', product_price: '', sale_price: '', in_hand_qty: '', status: 'Active' });
-        } catch (err) { alert('Failed to add product'); }
-    };
-
-    const handleCellClick = (product, field, isDynamic = false) => {
-        setEditingCell({ id: product.id, field, isDynamic });
-        setEditValue(isDynamic ? (product.dynamic_data?.[field] || '') : product[field]);
-    };
-
-    const handleCellSave = async (product) => {
-        if (!editingCell.id) return;
-
-        try {
-            const updatedData = { ...product };
-            let val = editValue;
-            if (['product_price', 'sale_price'].includes(editingCell.field)) val = parseFloat(val);
-            if (editingCell.field === 'in_hand_qty') val = parseInt(val || 0);
-
-            if (editingCell.isDynamic) {
-                updatedData.dynamic_data = { ...updatedData.dynamic_data, [editingCell.field]: val };
+            const payload = { 
+                ...formData, 
+                product_price: parseFloat(formData.product_price), 
+                sale_price: parseFloat(formData.sale_price), 
+                in_hand_qty: parseInt(formData.in_hand_qty || 0) 
+            };
+            
+            if (editingProduct) {
+                const { data } = await api.put(`/products/${editingProduct.id}`, payload);
+                setProducts(products.map(p => p.id === editingProduct.id ? data : p));
             } else {
-                updatedData[editingCell.field] = val;
+                const { data } = await api.post('/products/', payload);
+                setProducts([data, ...products]);
             }
-
-            const { data } = await api.put(`/products/${product.id}`, updatedData);
-            setProducts(products.map(p => p.id === product.id ? data : p));
-        } catch (err) {
-            console.error(err);
-            alert('Failed to update field');
-        } finally {
-            setEditingCell({ id: null, field: null });
+            setIsAddOrEditModalOpen(false);
+        } catch (err) { 
+            alert('Failed to save product'); 
         }
-    };
-
-    const handleCellKeyDown = (e, product) => {
-        if (e.key === 'Enter') handleCellSave(product);
-        if (e.key === 'Escape') setEditingCell({ id: null, field: null });
     };
 
     const handleDelete = async (id) => {
@@ -98,6 +96,9 @@ function Products() {
             setProducts(products.filter(p => p.id !== id));
         } catch (err) { alert('Failed to delete'); }
     };
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
 
     const filteredProducts = products.filter(p => {
         const matchesGlobal = Object.values(p).some(val => String(val).toLowerCase().includes(search.toLowerCase()));
@@ -112,21 +113,26 @@ function Products() {
         return matchesGlobal && matchesColumns;
     });
 
+    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+    const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in relative">
             {userRole === 'SuperAdmin' && (
                 <DynamicColumnManager tableName="products" onColumnAdded={fetchCustomColumns} />
             )}
 
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-900">Products & Stock</h1>
-                <div className="flex space-x-3">
-                    <button onClick={() => setShowTransactionModal(true)} className="bg-white border text-gray-600 hover:text-indigo-600 px-4 py-2 rounded-lg flex items-center shadow-sm transition-all text-sm font-medium">
-                        <Activity size={18} className="mr-2" /> Add Stock (Transaction)
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-5 rounded-2xl shadow-sm border border-gray-100 gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900">Products Inventory</h1>
+                    <p className="text-gray-500 text-sm mt-1">Manage your SKUs, pricing, and stock levels.</p>
+                </div>
+                <div className="flex space-x-3 w-full md:w-auto">
+                    <button onClick={() => setShowTransactionModal(true)} className="flex-1 md:flex-none justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2.5 rounded-xl flex items-center transition-all text-sm font-semibold border border-indigo-200 shadow-sm leading-none h-[42px]">
+                        <Activity size={18} className="mr-2" /> Quick Action (Sell/Return)
                     </button>
-                    <button onClick={() => setShowAddForm(!showAddForm)} className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg flex items-center shadow-sm transition-all text-sm font-medium">
-                        {showAddForm ? <X size={20} className="mr-2" /> : <Plus size={20} className="mr-2" />}
-                        {showAddForm ? 'Cancel' : 'New Product'}
+                    <button onClick={() => openModal()} className="flex-1 md:flex-none justify-center bg-primary hover:bg-secondary text-white px-4 py-2.5 rounded-xl flex items-center shadow-lg shadow-primary/30 transition-all text-sm font-semibold transform hover:scale-105 leading-none h-[42px]">
+                        <Plus size={18} className="mr-2" /> New Product
                     </button>
                 </div>
             </div>
@@ -137,125 +143,185 @@ function Products() {
                 onSuccess={fetchProducts}
             />
 
-            {showAddForm && (
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-top-4">
-                    <h2 className="text-lg font-semibold mb-4 text-gray-800">Add New Product</h2>
-                    <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                        <input required placeholder="Article No" className="input-field" value={formData.article_no} onChange={e => setFormData({ ...formData, article_no: e.target.value })} />
-                        <input required placeholder="Name" className="input-field lg:col-span-2" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                        <input required type="number" step="0.01" placeholder="Purchase Price" className="input-field" value={formData.product_price} onChange={e => setFormData({ ...formData, product_price: e.target.value })} />
-                        <input required type="number" step="0.01" placeholder="Sale Price" className="input-field" value={formData.sale_price} onChange={e => setFormData({ ...formData, sale_price: e.target.value })} />
-                        <input type="number" placeholder="In-Hand Qty" className="input-field" value={formData.in_hand_qty} onChange={e => setFormData({ ...formData, in_hand_qty: e.target.value })} />
-                        {customColumns.map(col => (
-                            <input
-                                key={col.id}
-                                placeholder={col.column_name}
-                                className="input-field"
-                                value={formData.dynamic_data[col.column_name] || ''}
-                                onChange={e => setFormData({ ...formData, dynamic_data: { ...formData.dynamic_data, [col.column_name]: e.target.value } })}
-                            />
-                        ))}
-                        <div className="lg:col-span-6 flex justify-end mt-2">
-                            <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm">Save Product</button>
+            {isAddOrEditModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden transform transition-all">
+                        <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/80">
+                            <h2 className="text-xl font-bold text-gray-800 tracking-tight">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+                            <button onClick={() => setIsAddOrEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 hover:bg-white p-2 rounded-full transition-all"><X size={20} /></button>
                         </div>
-                    </form>
+                        
+                        <form onSubmit={handleSubmit} className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                <div className="col-span-1 lg:col-span-1">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Article No (SKU)</label>
+                                    <input required placeholder="ART-101" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.article_no} onChange={e => setFormData({ ...formData, article_no: e.target.value })} />
+                                </div>
+                                <div className="col-span-1 md:col-span-1 lg:col-span-2">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Product Name</label>
+                                    <input required placeholder="Premium Widget" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                </div>
+
+                                <div className="col-span-1">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                                    <input placeholder="Electronics" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} />
+                                </div>
+                                <div className="col-span-1">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                                    <select className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-white font-medium text-gray-900" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
+                                </div>
+                                <div className="col-span-1">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">In-Hand Qty</label>
+                                    <input type="number" placeholder="0" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.in_hand_qty} onChange={e => setFormData({ ...formData, in_hand_qty: e.target.value })} />
+                                </div>
+
+                                <div className="col-span-1 lg:col-span-1">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Purchase Price ($)</label>
+                                    <input required type="number" step="0.01" placeholder="0.00" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.product_price} onChange={e => setFormData({ ...formData, product_price: e.target.value })} />
+                                </div>
+                                <div className="col-span-1 lg:col-span-1">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Sale Price ($)</label>
+                                    <input required type="number" step="0.01" placeholder="0.00" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.sale_price} onChange={e => setFormData({ ...formData, sale_price: e.target.value })} />
+                                </div>
+                                
+                                {customColumns.map(col => (
+                                    <div key={col.id} className="col-span-1">
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2 capitalize">{col.column_name}</label>
+                                        <input
+                                            placeholder="..."
+                                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900"
+                                            value={formData.dynamic_data[col.column_name] || ''}
+                                            onChange={e => setFormData({ ...formData, dynamic_data: { ...formData.dynamic_data, [col.column_name]: e.target.value } })}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="pt-8 flex justify-end space-x-3 border-t border-gray-100 mt-6">
+                                <button type="button" onClick={() => setIsAddOrEditModalOpen(false)} className="px-6 py-2.5 text-gray-600 hover:bg-gray-100 rounded-xl font-medium border border-gray-200 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-gray-200">Cancel</button>
+                                <button type="submit" className="px-6 py-2.5 bg-primary hover:bg-secondary text-white rounded-xl font-medium transition-all shadow-lg shadow-primary/30 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center">
+                                    {editingProduct ? 'Save Changes' : 'Create Product'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 flex items-center bg-gray-50/50">
-                    <div className="relative w-full max-w-md">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/30">
+                    <div className="relative w-full sm:max-w-md">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                             <Search size={18} className="text-gray-400" />
                         </div>
-                        <input type="text" placeholder="Search products..." className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" value={search} onChange={(e) => setSearch(e.target.value)} />
+                        <input type="text" placeholder="Search across all fields..." className="pl-11 pr-4 py-2.5 w-full border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm bg-white" value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} />
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-gray-500 font-medium">
+                        <Filter size={16} /><span>Advanced Filters</span>
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                <div className="overflow-x-auto min-h-[400px]">
+                    <table className="w-full text-left border-collapse whitespace-nowrap">
                         <thead>
-                            <tr className="bg-gray-50 text-gray-600 text-sm font-medium uppercase tracking-wider border-b border-gray-200">
-                                {['article_no', 'name', 'product_price', 'sale_price', 'in_hand_qty'].map(field => (
-                                    <th key={field} className={`p-4 align-top ${['product_price', 'sale_price'].includes(field) ? 'text-right' : field === 'in_hand_qty' ? 'text-center' : ''}`}>
-                                        <div className="mb-2 capitalize">{field.replace('_', ' ')}</div>
+                            <tr className="bg-white text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-200">
+                                {['article_no', 'name', 'category', 'product_price', 'sale_price', 'in_hand_qty'].map((field) => (
+                                    <th key={field} className={`p-4 align-top border-r border-gray-50 last:border-0 ${['product_price', 'sale_price'].includes(field) ? 'text-right' : field === 'in_hand_qty' ? 'text-center' : ''}`}>
+                                        <div className="mb-2 flex flex-col justify-end h-5">
+                                            {field === 'product_price' ? 'Cost Price' : field.replace('_', ' ')}
+                                        </div>
                                         <input
-                                            placeholder="Search..."
-                                            className="w-full text-xs p-1 border border-gray-300 rounded outline-none focus:border-indigo-500 font-normal bg-white text-gray-800"
+                                            placeholder="Filter..."
+                                            className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded-md outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 font-normal bg-gray-50/50 text-gray-800 placeholder-gray-400"
                                             value={columnFilters[field] || ''}
-                                            onChange={e => setColumnFilters({ ...columnFilters, [field]: e.target.value })}
+                                            onChange={e => { setColumnFilters({ ...columnFilters, [field]: e.target.value }); setCurrentPage(1); }}
                                         />
                                     </th>
                                 ))}
-                                <th className="p-4 align-top">
-                                    <div className="mb-2">Status</div>
-                                    <input
-                                        placeholder="Search..."
-                                        className="w-full text-xs p-1 border border-gray-300 rounded outline-none font-normal bg-white text-gray-800"
+                                <th className="p-4 align-top border-r border-gray-50">
+                                    <div className="mb-2 flex flex-col justify-end h-5">Status</div>
+                                    <select
+                                        className="w-full text-xs px-1 py-1.5 border border-gray-200 rounded-md outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 font-normal bg-gray-50/50 text-gray-800 cursor-pointer"
                                         value={columnFilters['status'] || ''}
-                                        onChange={e => setColumnFilters({ ...columnFilters, status: e.target.value })}
-                                    />
+                                        onChange={e => { setColumnFilters({ ...columnFilters, status: e.target.value }); setCurrentPage(1); }}
+                                    >
+                                        <option value="">All</option>
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
                                 </th>
                                 {customColumns.map(c => (
-                                    <th key={c.id} className="p-4 align-top">
-                                        <div className="mb-2">{c.column_name}</div>
+                                    <th key={c.id} className="p-4 align-top border-r border-gray-50">
+                                        <div className="mb-2 flex flex-col justify-end h-5 truncate max-w-[120px]" title={c.column_name}>{c.column_name}</div>
                                         <input
-                                            placeholder="Search..."
-                                            className="w-full text-xs p-1 border border-gray-300 rounded outline-none font-normal bg-white text-gray-800"
+                                            placeholder="Filter..."
+                                            className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded-md outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 font-normal bg-gray-50/50 text-gray-800"
                                             value={columnFilters[c.column_name] || ''}
-                                            onChange={e => setColumnFilters({ ...columnFilters, [c.column_name]: e.target.value })}
+                                            onChange={e => { setColumnFilters({ ...columnFilters, [c.column_name]: e.target.value }); setCurrentPage(1); }}
                                         />
                                     </th>
                                 ))}
-                                <th className="p-4 text-right align-top">Actions</th>
+                                <th className="p-4 text-center align-top relative w-20">
+                                    <div className="absolute inset-x-0 bottom-4 text-xs font-bold uppercase tracking-wider text-gray-400">Manage</div>
+                                </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 text-gray-800">
+                        <tbody className="divide-y divide-gray-100 text-gray-700 text-sm">
                             {loading ? (
-                                <tr><td colSpan={7 + customColumns.length} className="p-4 text-center text-gray-500">Loading data...</td></tr>
-                            ) : filteredProducts.length === 0 ? (
-                                <tr><td colSpan={7 + customColumns.length} className="p-4 text-center text-gray-500 pb-8 pt-8">No products found.</td></tr>
+                                <tr>
+                                    <td colSpan={8 + customColumns.length} className="p-16 text-center">
+                                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                        <p className="mt-2 text-gray-500 font-medium tracking-wide text-sm">Loading inventory...</p>
+                                    </td>
+                                </tr>
+                            ) : paginatedProducts.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8 + customColumns.length} className="p-16 text-center">
+                                        <PackageOpen size={48} className="mx-auto text-gray-300 mb-3" />
+                                        <h3 className="text-gray-900 font-bold mb-1">No products found</h3>
+                                        <p className="text-gray-500">Try adjusting your search or filters.</p>
+                                    </td>
+                                </tr>
                             ) : (
-                                filteredProducts.map((p) => (
-                                    <tr key={p.id} className="hover:bg-gray-50/50 transition-colors group">
-                                        {['article_no', 'name', 'product_price', 'sale_price', 'in_hand_qty', 'status'].map(field => (
-                                            <td key={field} className={`p-0 relative cursor-pointer group-hover:bg-indigo-50/30 ${['product_price', 'sale_price'].includes(field) ? 'text-right' : field === 'in_hand_qty' ? 'text-center' : ''}`} onClick={() => handleCellClick(p, field)}>
-                                                {editingCell.id === p.id && editingCell.field === field ? (
-                                                    field === 'status' ? (
-                                                        <select autoFocus className="w-full h-full p-4 outline-none border-2 border-indigo-500 bg-white" value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={() => handleCellSave(p)} onKeyDown={(e) => handleCellKeyDown(e, p)}>
-                                                            <option value="Active">Active</option>
-                                                            <option value="Inactive">Inactive</option>
-                                                        </select>
-                                                    ) : (
-                                                        <input autoFocus type={['product_price', 'sale_price', 'in_hand_qty'].includes(field) ? "number" : "text"} step={field === 'in_hand_qty' ? "1" : "0.01"} className="w-full h-full p-4 outline-none border-2 border-indigo-500 bg-white shadow-inner" value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={() => handleCellSave(p)} onKeyDown={(e) => handleCellKeyDown(e, p)} />
-                                                    )
-                                                ) : (
-                                                    <div className={`p-4 ${field === 'article_no' ? 'font-medium text-gray-900' : ''}`}>
-                                                        {field === 'product_price' || field === 'sale_price' ? (
-                                                            <span className="font-mono">${Number(p[field] || 0).toFixed(2)}</span>
-                                                        ) : field === 'in_hand_qty' ? (
-                                                            <span className={`inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none rounded ${p.in_hand_qty > 10 ? 'bg-green-100 text-green-800' : p.in_hand_qty > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{p.in_hand_qty}</span>
-                                                        ) : field === 'status' ? (
-                                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${p.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{p.status}</span>
-                                                        ) : (p[field] || '-')}
-                                                    </div>
-                                                )}
+                                paginatedProducts.map((p) => (
+                                    <tr key={p.id} className="hover:bg-gray-50/80 transition-colors group">
+                                        {['article_no', 'name', 'category', 'product_price', 'sale_price', 'in_hand_qty'].map(field => (
+                                            <td key={field} className={`px-4 py-3.5 border-r border-transparent group-hover:border-gray-100 ${['product_price', 'sale_price'].includes(field) ? 'text-right' : field === 'in_hand_qty' ? 'text-center' : ''}`}>
+                                                <div className={`${field === 'name' ? 'font-bold text-gray-900 max-w-[200px] truncate' : field === 'article_no' ? 'text-gray-500 font-medium' : ''}`}>
+                                                    {['product_price', 'sale_price'].includes(field) ? (
+                                                        <span className="font-mono bg-gray-50 px-2 py-0.5 rounded border border-gray-100 mr-[-4px]">${Number(p[field] || 0).toFixed(2)}</span>
+                                                    ) : field === 'in_hand_qty' ? (
+                                                        <span className={`inline-flex items-center justify-center px-2.5 py-1 text-xs font-black tracking-wide leading-none rounded-md ${p.in_hand_qty > 10 ? 'bg-emerald-100 text-emerald-800' : p.in_hand_qty > 0 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}`}>
+                                                            {p.in_hand_qty}
+                                                        </span>
+                                                    ) : field === 'category' ? (
+                                                        <span className="text-gray-600 font-medium bg-gray-100/80 px-2.5 py-1 rounded-full text-xs tracking-wide">{p[field] || 'Uncategorized'}</span>
+                                                    ) : (p[field] || '-')}
+                                                </div>
                                             </td>
                                         ))}
+
+                                        <td className="px-4 py-3.5 border-r border-transparent group-hover:border-gray-100 text-center">
+                                            <span className={`px-2 py-1 text-[11px] font-bold uppercase tracking-wider rounded-md ${p.status === 'Active' ? 'bg-green-100/80 text-green-700' : 'bg-gray-200 text-gray-600'}`}>{p.status}</span>
+                                        </td>
 
                                         {customColumns.map(col => (
-                                            <td key={col.id} className="p-0 relative cursor-pointer group-hover:bg-indigo-50/30" onClick={() => handleCellClick(p, col.column_name, true)}>
-                                                {editingCell.id === p.id && editingCell.field === col.column_name ? (
-                                                    <input autoFocus className="w-full h-full p-4 outline-none border-2 border-indigo-500 bg-white shadow-inner" value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={() => handleCellSave(p)} onKeyDown={(e) => handleCellKeyDown(e, p)} />
-                                                ) : (
-                                                    <div className="p-4 text-gray-500">{p.dynamic_data?.[col.column_name] || '-'}</div>
-                                                )}
+                                            <td key={col.id} className="px-4 py-3.5 text-gray-600 border-r border-transparent group-hover:border-gray-100 max-w-[150px] truncate">
+                                                {p.dynamic_data?.[col.column_name] || '-'}
                                             </td>
                                         ))}
 
-                                        <td className="p-4 text-right">
-                                            <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handleDelete(p.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
+                                        <td className="px-4 py-3.5 text-center">
+                                            <div className="flex justify-center space-x-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => openModal(p)} className="p-2 text-indigo-600 hover:bg-indigo-50 hover:shadow-sm rounded-lg transition-all" title="Edit">
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button onClick={() => handleDelete(p.id)} className="p-2 text-rose-600 hover:bg-rose-50 hover:shadow-sm rounded-lg transition-all" title="Delete">
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -263,6 +329,28 @@ function Products() {
                             )}
                         </tbody>
                     </table>
+                </div>
+                <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between text-sm text-gray-500 font-medium">
+                    <span>Showing {paginatedProducts.length} of {filteredProducts.length} products</span>
+                    {totalPages > 1 && (
+                        <div className="flex space-x-2 mt-4 sm:mt-0">
+                            <button 
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(c => Math.max(1, c - 1))}
+                                className="px-3 py-1.5 border border-gray-200 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Previous
+                            </button>
+                            <span className="px-3 py-1.5 font-bold text-gray-700">Page {currentPage} of {totalPages}</span>
+                            <button 
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
+                                className="px-3 py-1.5 border border-gray-200 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

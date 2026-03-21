@@ -105,6 +105,9 @@ function Suppliers() {
         }
     };
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+
     const filteredSuppliers = suppliers.filter(s => {
         // Global search
         const matchesGlobal = Object.values(s).some(val =>
@@ -122,6 +125,9 @@ function Suppliers() {
 
         return matchesGlobal && matchesColumns;
     });
+
+    const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
+    const paginatedSuppliers = filteredSuppliers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const totalColumnCount = 6 + customColumns.length; // 5 fixed columns + 1 actions column + custom columns
 
@@ -144,28 +150,45 @@ function Suppliers() {
 
             {showAddForm && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-top-4">
-                    <h2 className="text-lg font-semibold mb-4 text-gray-800">New Supplier</h2>
-                    <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        <input required placeholder="Supplier No" className="input-field" value={formData.supplier_no} onChange={e => setFormData({ ...formData, supplier_no: e.target.value })} />
-                        <input required placeholder="Name" className="input-field" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                        <input placeholder="Email" type="email" className="input-field" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                        <input placeholder="Phone" className="input-field" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                        <select className="input-field bg-white" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                        </select>
+                    <h2 className="text-lg font-semibold mb-6 text-gray-800 border-b border-gray-100 pb-3">Onboard New Supplier</h2>
+                    <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <div className="col-span-1">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Supplier No</label>
+                            <input required placeholder="SUP-001" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.supplier_no} onChange={e => setFormData({ ...formData, supplier_no: e.target.value })} />
+                        </div>
+                        <div className="col-span-1 md:col-span-2">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Supplier Name</label>
+                            <input required placeholder="Global Traders Inc." className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                        </div>
+                        <div className="col-span-1">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                            <input placeholder="contact@supplier.com" type="email" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                        </div>
+                        <div className="col-span-1">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                            <input placeholder="+1 (555) 000-0000" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                        </div>
+                        <div className="col-span-1">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                            <select className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-white font-medium text-gray-900" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
                         {customColumns.map(col => (
-                            <input
-                                key={col.id}
-                                placeholder={col.column_name}
-                                className="input-field"
-                                value={formData.dynamic_data[col.column_name] || ''}
-                                onChange={e => setFormData({ ...formData, dynamic_data: { ...formData.dynamic_data, [col.column_name]: e.target.value } })}
-                            />
+                            <div key={col.id} className="col-span-1">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2 capitalize">{col.column_name}</label>
+                                <input
+                                    placeholder="..."
+                                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900"
+                                    value={formData.dynamic_data[col.column_name] || ''}
+                                    onChange={e => setFormData({ ...formData, dynamic_data: { ...formData.dynamic_data, [col.column_name]: e.target.value } })}
+                                />
+                            </div>
                         ))}
-                        <div className="lg:col-span-5 flex justify-end">
-                            <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm">
-                                Save Details
+                        <div className="lg:col-span-3 flex justify-end mt-4 pt-4 border-t border-gray-50">
+                            <button type="submit" className="bg-primary hover:bg-secondary text-white px-8 py-2.5 rounded-xl font-medium transition-colors shadow-sm transform hover:scale-[1.02]">
+                                Save Supplier
                             </button>
                         </div>
                     </form>
@@ -183,12 +206,12 @@ function Suppliers() {
                             placeholder="Search all columns..."
                             className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                         />
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto min-h-[400px]">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50 text-gray-600 text-sm hidden lg:table-row font-medium uppercase tracking-wider border-b border-gray-200">
@@ -199,7 +222,7 @@ function Suppliers() {
                                             placeholder="Search..."
                                             className="w-full text-xs p-1 border border-gray-300 rounded outline-none focus:border-indigo-500 font-normal bg-white text-gray-800"
                                             value={columnFilters[field] || ''}
-                                            onChange={e => setColumnFilters({ ...columnFilters, [field]: e.target.value })}
+                                            onChange={e => { setColumnFilters({ ...columnFilters, [field]: e.target.value }); setCurrentPage(1); }}
                                         />
                                     </th>
                                 ))}
@@ -210,7 +233,7 @@ function Suppliers() {
                                             placeholder="Search..."
                                             className="w-full text-xs p-1 border border-gray-300 rounded outline-none focus:border-indigo-500 font-normal bg-white text-gray-800"
                                             value={columnFilters[c.column_name] || ''}
-                                            onChange={e => setColumnFilters({ ...columnFilters, [c.column_name]: e.target.value })}
+                                            onChange={e => { setColumnFilters({ ...columnFilters, [c.column_name]: e.target.value }); setCurrentPage(1); }}
                                         />
                                     </th>
                                 ))}
@@ -220,10 +243,10 @@ function Suppliers() {
                         <tbody className="divide-y divide-gray-100 text-gray-800">
                             {loading ? (
                                 <tr><td colSpan={totalColumnCount} className="p-4 text-center text-gray-500">Loading data...</td></tr>
-                            ) : filteredSuppliers.length === 0 ? (
+                            ) : paginatedSuppliers.length === 0 ? (
                                 <tr><td colSpan={totalColumnCount} className="p-4 text-center text-gray-500 pb-8 pt-8">No suppliers found.</td></tr>
                             ) : (
-                                filteredSuppliers.map((supplier) => (
+                                paginatedSuppliers.map((supplier) => (
                                     <tr key={supplier.id} className="hover:bg-gray-50/50 transition-colors group">
                                         {/* Standard Columns */}
                                         {['supplier_no', 'name', 'email', 'phone', 'status'].map(field => (
@@ -233,10 +256,16 @@ function Suppliers() {
                                                         <select
                                                             autoFocus
                                                             className="w-full h-full p-4 outline-none border-2 border-indigo-500 bg-white"
-                                                            value={editValue}
-                                                            onChange={e => setEditValue(e.target.value)}
-                                                            onBlur={() => handleCellSave(supplier)}
-                                                            onKeyDown={(e) => handleCellKeyDown(e, supplier)}
+                                                            value={supplier.status}
+                                                            onChange={async (e) => {
+                                                                const newStatus = e.target.value;
+                                                                setEditingCell({ id: null, field: null });
+                                                                try {
+                                                                    const { data } = await api.put(`/suppliers/${supplier.id}`, { ...supplier, status: newStatus });
+                                                                    setSuppliers(suppliers.map(s => s.id === supplier.id ? data : s));
+                                                                } catch(err) { alert('Failed to change status'); }
+                                                            }}
+                                                            onBlur={() => setEditingCell({ id: null, field: null })}
                                                         >
                                                             <option value="Active">Active</option>
                                                             <option value="Inactive">Inactive</option>
@@ -291,6 +320,29 @@ function Suppliers() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between text-sm text-gray-500 font-medium">
+                    <span>Showing {paginatedSuppliers.length} of {filteredSuppliers.length} suppliers</span>
+                    {totalPages > 1 && (
+                        <div className="flex space-x-2 mt-4 sm:mt-0">
+                            <button 
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(c => Math.max(1, c - 1))}
+                                className="px-3 py-1.5 border border-gray-200 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Previous
+                            </button>
+                            <span className="px-3 py-1.5 font-bold text-gray-700">Page {currentPage} of {totalPages}</span>
+                            <button 
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
+                                className="px-3 py-1.5 border border-gray-200 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

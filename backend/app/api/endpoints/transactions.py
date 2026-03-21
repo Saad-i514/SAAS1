@@ -25,13 +25,14 @@ def create_transaction(
     transaction_in: schemas.transaction.TransactionCreate,
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
+    create_data = transaction_in.model_dump(exclude={"add_to_stock"})
     transaction = models.Transaction(
-        **transaction_in.model_dump(),
+        **create_data,
         company_id=current_user.company_id
     )
     db.add(transaction)
     
-    # If it's a purchase/sale, update the product quantity
+    # If it's a purchase/sale/return, update the product quantity
     if transaction_in.product_name and transaction_in.quantity:
         product = db.query(models.Product).filter(
             models.Product.name == transaction_in.product_name,
@@ -44,6 +45,9 @@ def create_transaction(
                 product.in_hand_qty -= transaction_in.quantity
             elif transaction_in.type == models.TransactionTypeEnum.REVERSE:
                 product.in_hand_qty += transaction_in.quantity # Restock on reverse
+            elif transaction_in.type == models.TransactionTypeEnum.RETURN:
+                if transaction_in.add_to_stock:
+                    product.in_hand_qty += transaction_in.quantity
             db.add(product)
             
     db.commit()

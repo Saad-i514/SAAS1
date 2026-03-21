@@ -7,6 +7,7 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Suppliers from './pages/Suppliers';
 import Products from './pages/Products';
 import Reports from './pages/Reports';
+import Users from './pages/Users';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -35,6 +36,7 @@ function App() {
           <Route index element={<RoleBasedIndexRoute />} />
           <Route path="suppliers" element={<Suppliers />} />
           <Route path="products" element={<Products />} />
+          <Route path="users" element={<Users />} />
           <Route path="reports" element={<Reports />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Route>

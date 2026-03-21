@@ -25,6 +25,7 @@ class TransactionBase(BaseModel):
 class TransactionCreate(TransactionBase):
     supplier_id: Optional[int] = None
     date: Optional[datetime] = None
+    add_to_stock: Optional[bool] = False
 
 class TransactionUpdate(BaseModel):
     # Depending on what can be updated
