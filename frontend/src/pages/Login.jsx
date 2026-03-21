@@ -23,7 +23,7 @@ function Login() {
         <div className="min-h-screen flex items-center justify-center bg-darker p-4 text-white">
             <div className="w-full max-w-md bg-dark p-8 rounded-2xl shadow-xl border border-gray-800">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-primary mb-2">SaaS System</h1>
+                    <h1 className="text-4xl font-extrabold text-primary mb-2 tracking-tight">Business Management System</h1>
                     <p className="text-gray-400">Welcome back. Please login to your account.</p>
                 </div>
 
