@@ -21,6 +21,30 @@ def seed_db():
         db.add(company)
         db.commit()
         db.refresh(company)
+        
+    # Get or create Super Admin
+    super_admin = db.query(User).filter_by(email="admin@meerab.com").first()
+    if not super_admin:
+        super_admin = User(
+            email="admin@meerab.com",
+            hashed_password=get_password_hash("password123"),
+            role=RoleEnum.SUPER_ADMIN,
+            company_id=company.id
+        )
+        db.add(super_admin)
+    
+    # Get or create Manager
+    manager = db.query(User).filter_by(email="m83367754@gmail.com").first()
+    if not manager:
+        manager = User(
+            email="m83367754@gmail.com",
+            hashed_password=get_password_hash("password123"),
+            role=RoleEnum.ADMIN,
+            company_id=company.id
+        )
+        db.add(manager)
+        
+    db.commit()
 
     # Create Suppliers
     suppliers_data = [

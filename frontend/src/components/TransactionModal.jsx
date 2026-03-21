@@ -55,7 +55,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto transform transition-all">
                 <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/80">
                     <h2 className="text-xl font-bold text-gray-800 tracking-tight">Record a Transaction</h2>
                     <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 hover:bg-white p-2 rounded-full transition-all"><X size={20} /></button>

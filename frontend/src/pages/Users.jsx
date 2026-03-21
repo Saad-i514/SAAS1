@@ -77,7 +77,7 @@ function Users() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Employees</h1>
           <p className="text-gray-500 mt-1">Manage your company's users and credentials.</p>
@@ -165,8 +165,8 @@ function Users() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl transform scale-100 transition-transform">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+            <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl transform transition-all">
+                <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50">
               <h2 className="text-xl font-bold tracking-tight text-gray-900">
                 {editingUser ? 'Edit Employee' : 'Add Employee'}
               </h2>

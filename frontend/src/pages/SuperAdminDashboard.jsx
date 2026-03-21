@@ -55,7 +55,7 @@ function SuperAdminDashboard() {
 
     return (
         <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
-            <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center">
                         <Building2 className="mr-3 text-primary" size={28} />

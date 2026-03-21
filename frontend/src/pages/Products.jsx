@@ -145,7 +145,7 @@ function Products() {
 
             {isAddOrEditModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden transform transition-all">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto transform transition-all">
                         <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/80">
                             <h2 className="text-xl font-bold text-gray-800 tracking-tight">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
                             <button onClick={() => setIsAddOrEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 hover:bg-white p-2 rounded-full transition-all"><X size={20} /></button>

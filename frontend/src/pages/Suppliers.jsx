@@ -137,7 +137,7 @@ function Suppliers() {
                 <DynamicColumnManager tableName="suppliers" onColumnAdded={fetchCustomColumns} />
             )}
 
-            <div className="flex justify-between items-center outline-none">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center outline-none gap-4">
                 <h1 className="text-2xl font-bold text-gray-900">Suppliers</h1>
                 <button
                     onClick={() => setShowAddForm(!showAddForm)}

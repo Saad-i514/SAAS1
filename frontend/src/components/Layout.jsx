@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { logout } from '../services/authService';
-import { LayoutDashboard, Users as UsersIcon, Package, LogOut, Settings, FileText, Building2, UserCog } from 'lucide-react';
+import { LayoutDashboard, Users as UsersIcon, Package, LogOut, Settings, FileText, Building2, UserCog, Menu, X } from 'lucide-react';
 import Chatbot from '../components/Chatbot';
 
 function Layout() {
     const navigate = useNavigate();
     const location = useLocation();
     const [user, setUser] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
         const userData = localStorage.getItem('user');
@@ -44,8 +45,16 @@ function Layout() {
 
     return (
         <div className="flex h-screen bg-gray-50 w-full overflow-hidden">
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden transition-opacity"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <div className="w-64 bg-dark text-white flex flex-col flex-shrink-0">
+            <div className={`fixed md:static inset-y-0 left-0 z-30 w-64 bg-dark text-white flex flex-col flex-shrink-0 transform transition-transform duration-300 md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="h-16 flex items-center justify-center border-b border-gray-800 px-3">
                     <h1 className="text-lg font-bold text-primary tracking-tight leading-tight text-center">Business Management System</h1>
                 </div>
@@ -58,6 +67,7 @@ function Layout() {
                             <Link
                                 key={item.path}
                                 to={item.path}
+                                onClick={() => setIsSidebarOpen(false)}
                                 className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group ${isActive
                                     ? 'bg-primary/10 text-primary border border-primary/20'
                                     : 'text-gray-400 hover:bg-gray-800 hover:text-white'
@@ -82,13 +92,20 @@ function Layout() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0">
-                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 bg-glass z-10 sticky top-0 relative">
+            <div className="flex-1 flex flex-col min-w-0 md:ml-0 overflow-hidden">
+                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-8 bg-glass z-10 sticky top-0 relative">
                     {/* Left spacer for flex balance if needed, or just let absolute handle center */}
-                    <div className="flex-1"></div>
+                    <div className="flex-1 flex items-center">
+                        <button 
+                            className="md:hidden text-gray-800 hover:text-primary transition-colors focus:outline-none"
+                            onClick={() => setIsSidebarOpen(true)}
+                        >
+                            <Menu size={24} />
+                        </button>
+                    </div>
                     
                     {/* Centered Organization Name */}
-                    <div className="absolute left-1/2 transform -translate-x-1/2 text-2xl font-black text-gray-900 tracking-wider uppercase drop-shadow-sm whitespace-nowrap">
+                    <div className="absolute left-1/2 transform -translate-x-1/2 text-lg sm:text-xlg md:text-2xl font-black text-gray-900 tracking-wider uppercase drop-shadow-sm whitespace-nowrap hidden sm:block">
                         {user?.role === 'SuperAdmin' ? 'Super Admin Environment' : (user?.company?.name || 'Loading Company...')}
                     </div>
 
@@ -105,7 +122,7 @@ function Layout() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-auto p-8 bg-gray-50 relative">
+                <main className="flex-1 overflow-auto p-4 sm:p-8 bg-gray-50 relative">
                     <Outlet />
                     <Chatbot />
                 </main>
