@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, FileText, FileSpreadsheet, Package, Users, Activity, CalendarClock, TrendingUp, TrendingDown, RefreshCcw } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet, Package, Users, Activity, CalendarClock, TrendingUp, TrendingDown, RefreshCcw, Printer } from 'lucide-react';
 import api from '../services/api';
 
 function Reports() {
@@ -51,9 +51,12 @@ function Reports() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
 
-    // Reset pagination when timeframe changes
+    const [selectedItemIds, setSelectedItemIds] = useState([]);
+
+    // Reset pagination and selection when timeframe changes
     useEffect(() => {
         setCurrentPage(1);
+        setSelectedItemIds([]);
     }, [timeframe]);
 
     if (viewMode === 'exports') {
@@ -110,6 +113,113 @@ function Reports() {
     const totalPages = Math.ceil(items.length / itemsPerPage);
     const paginatedItems = items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+    const handleSelectAll = (e) => {
+        if (e.target.checked) setSelectedItemIds(items.map((_, i) => i));
+        else setSelectedItemIds([]);
+    };
+
+    const handleSelectRow = (i) => {
+        if (selectedItemIds.includes(i)) setSelectedItemIds(selectedItemIds.filter(id => id !== i));
+        else setSelectedItemIds([...selectedItemIds, i]);
+    };
+
+    const handlePrint = () => {
+        const itemsToPrint = selectedItemIds.length > 0 
+            ? items.filter((_, i) => selectedItemIds.includes(i)) 
+            : items;
+            
+        if (itemsToPrint.length === 0) {
+            alert("No items to print.");
+            return;
+        }
+
+        const printSummary = itemsToPrint.reduce((acc, item) => {
+            acc.qty += item.quantity || 0;
+            acc.sales += item.total_sale_price || 0;
+            acc.cost += item.total_cost_price || 0;
+            acc.profit += item.profit || 0;
+            return acc;
+        }, { qty: 0, sales: 0, cost: 0, profit: 0 });
+
+        const rowsHTML = itemsToPrint.map(item => {
+            const dateStr = new Date(item.date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return "<tr>" +
+                "<td>" + dateStr + "</td>" +
+                "<td>" + (item.product_name || '-') + "</td>" +
+                "<td>" + (item.category || '-') + "</td>" +
+                "<td class='text-center'>" + (item.quantity || 0) + "</td>" +
+                "<td class='text-right'>$" + (item.unit_sale_price || 0).toFixed(2) + "</td>" +
+                "<td class='text-right'>$" + (item.total_sale_price || 0).toFixed(2) + "</td>" +
+                "<td class='text-right'>$" + (item.total_cost_price || 0).toFixed(2) + "</td>" +
+                "<td class='text-right'>$" + (item.profit || 0).toFixed(2) + "</td>" +
+            "</tr>";
+        }).join('');
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Sales Performance Report</title>
+                <style>
+                    body { font-family: system-ui, -apple-system, sans-serif; color: #333; padding: 20px; }
+                    h1 { color: #111; margin-bottom: 5px; }
+                    .meta { color: #666; font-size: 14px; margin-bottom: 20px; }
+                    table { border-collapse: collapse; width: 100%; margin-bottom: 30px; }
+                    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
+                    th { background-color: #f8f9fa; color: #444; font-weight: bold; }
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+                    .summary-box { border: 2px solid #333; padding: 15px; border-radius: 8px; page-break-inside: avoid; }
+                    .summary-box h3 { margin-top: 0; margin-bottom: 15px; text-transform: uppercase; font-size: 14px; color: #444; }
+                    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+                    .summary-item strong { display: block; color: #666; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; }
+                    .summary-item span { font-size: 18px; font-weight: bold; color: #111; }
+                    @media print {
+                        body { padding: 0; margin: 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Sales Performance Report</h1>
+                <div class="meta">Printed on: ${new Date().toLocaleString()} | Items Included: ${itemsToPrint.length}</div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-right">Total Sale</th>
+                            <th class="text-right">Total Cost</th>
+                            <th class="text-right">Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHTML}
+                    </tbody>
+                </table>
+
+                <div class="summary-box">
+                    <h3>Report Summary (Based on Printed Items)</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item"><strong>Total Items Sold</strong><span>${printSummary.qty} units</span></div>
+                        <div class="summary-item"><strong>Total Sales Revenue</strong><span>$${printSummary.sales.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                        <div class="summary-item"><strong>Total Cost Value</strong><span>$${printSummary.cost.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                        <div class="summary-item"><strong>Net Profit</strong><span>$${printSummary.profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                    </div>
+                </div>
+                
+                <script>
+                    window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 200); }
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
     return (
         <div className="space-y-6 max-w-7xl mx-auto animate-fade-in relative">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 gap-4">
@@ -122,6 +232,13 @@ function Reports() {
                 </div>
                 
                 <div className="flex space-x-3 w-full md:w-auto">
+                    <button
+                        onClick={handlePrint}
+                        className="flex-1 md:flex-none justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2.5 rounded-xl border border-indigo-200 transition-all text-sm font-semibold shadow-sm flex items-center"
+                    >
+                        <Printer size={16} className="mr-2" />
+                        {selectedItemIds.length > 0 ? `Print Selected (${selectedItemIds.length})` : 'Print All'}
+                    </button>
                     <button
                         onClick={() => setViewMode('exports')}
                         className="flex-1 md:flex-none justify-center bg-white hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl border border-gray-200 transition-all text-sm font-semibold shadow-sm flex items-center"
@@ -198,6 +315,14 @@ function Reports() {
                             <table className="w-full text-left whitespace-nowrap">
                                 <thead>
                                     <tr className="bg-white text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-100">
+                                        <th className="px-4 py-4 w-12 text-center">
+                                            <input 
+                                                type="checkbox" 
+                                                onChange={handleSelectAll} 
+                                                checked={items.length > 0 && selectedItemIds.length === items.length}
+                                                className="w-4 h-4 rounded text-primary focus:ring-primary w-full cursor-pointer" 
+                                            />
+                                        </th>
                                         <th className="px-6 py-4">Date & Time</th>
                                         <th className="px-6 py-4">Product Name</th>
                                         <th className="px-6 py-4">Category</th>
@@ -211,32 +336,44 @@ function Reports() {
                                 <tbody className="divide-y divide-gray-50 text-sm">
                                     {paginatedItems.length === 0 ? (
                                         <tr>
-                                            <td colSpan="8" className="px-6 py-16 text-center text-gray-500">
+                                            <td colSpan="9" className="px-6 py-16 text-center text-gray-500">
                                                 <RefreshCcw size={40} className="mx-auto text-gray-300 mb-3" />
                                                 <p className="font-medium text-lg text-gray-800">No Sales Data</p>
                                                 <p>There are no transactions recorded for this period.</p>
                                             </td>
                                         </tr>
                                     ) : (
-                                        paginatedItems.map((item, i) => (
-                                            <tr key={i} className="hover:bg-gray-50/80 transition-colors group">
-                                                <td className="px-6 py-3.5 text-gray-500 font-medium">{new Date(item.date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                                                <td className="px-6 py-3.5 font-bold text-gray-900">{item.product_name}</td>
-                                                <td className="px-6 py-3.5"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-md text-xs font-semibold">{item.category}</span></td>
-                                                <td className="px-6 py-3.5 text-center font-bold text-gray-700">{item.quantity}</td>
-                                                <td className="px-6 py-3.5 text-right font-mono text-gray-600">${item.unit_sale_price?.toFixed(2)}</td>
-                                                <td className="px-6 py-3.5 text-right font-mono font-bold text-blue-700 bg-blue-50/20 group-hover:bg-blue-50/50">${item.total_sale_price?.toFixed(2)}</td>
-                                                <td className="px-6 py-3.5 text-right font-mono font-medium text-orange-700 bg-orange-50/20 group-hover:bg-orange-50/50">${item.total_cost_price?.toFixed(2)}</td>
-                                                <td className="px-6 py-3.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/20 group-hover:bg-emerald-50/50">
-                                                    {item.profit >= 0 ? '+' : ''}{item.profit?.toFixed(2)}
-                                                </td>
-                                            </tr>
-                                        ))
+                                        paginatedItems.map((item, i) => {
+                                            const globalIndex = items.indexOf(item);
+                                            return (
+                                                <tr key={globalIndex} className={`hover:bg-gray-50/80 transition-colors group ${selectedItemIds.includes(globalIndex) ? 'bg-indigo-50/30' : ''}`}>
+                                                    <td className="px-4 py-3.5 text-center">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={selectedItemIds.includes(globalIndex)} 
+                                                            onChange={() => handleSelectRow(globalIndex)}
+                                                            className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer w-full mx-auto" 
+                                                        />
+                                                    </td>
+                                                    <td className="px-6 py-3.5 text-gray-500 font-medium">{new Date(item.date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                                                    <td className="px-6 py-3.5 font-bold text-gray-900">{item.product_name}</td>
+                                                    <td className="px-6 py-3.5"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-md text-xs font-semibold">{item.category}</span></td>
+                                                    <td className="px-6 py-3.5 text-center font-bold text-gray-700">{item.quantity}</td>
+                                                    <td className="px-6 py-3.5 text-right font-mono text-gray-600">${item.unit_sale_price?.toFixed(2)}</td>
+                                                    <td className="px-6 py-3.5 text-right font-mono font-bold text-blue-700 bg-blue-50/20 group-hover:bg-blue-50/50">${item.total_sale_price?.toFixed(2)}</td>
+                                                    <td className="px-6 py-3.5 text-right font-mono font-medium text-orange-700 bg-orange-50/20 group-hover:bg-orange-50/50">${item.total_cost_price?.toFixed(2)}</td>
+                                                    <td className="px-6 py-3.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/20 group-hover:bg-emerald-50/50">
+                                                        {item.profit >= 0 ? '+' : ''}{item.profit?.toFixed(2)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                     )}
                                 </tbody>
                                 {items.length > 0 && (
                                     <tfoot className="bg-gray-50/80 border-t-2 border-gray-200 text-sm font-bold">
                                         <tr>
+                                            <td className="px-4 py-4"></td>
                                             <td colSpan="3" className="px-6 py-4 text-right text-gray-700 uppercase tracking-wider text-xs">Period Totals:</td>
                                             <td className="px-6 py-4 text-center text-gray-900">{summary.total_quantity}</td>
                                             <td className="px-6 py-4"></td>
