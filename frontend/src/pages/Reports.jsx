@@ -48,6 +48,14 @@ function Reports() {
         { title: 'Transaction History', desc: 'Detailed log of all purchases, sales, and reverses.', type: 'transactions', icon: Activity, color: 'text-green-600', bg: 'bg-green-100' }
     ];
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+
+    // Reset pagination when timeframe changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [timeframe]);
+
     if (viewMode === 'exports') {
         return (
             <div className="space-y-6 max-w-5xl animate-fade-in">
@@ -98,14 +106,6 @@ function Reports() {
     // Interactive Sales Report View
     const { items = [], summary = {} } = reportData || {};
     const isProfit = (summary.total_profit || 0) >= (summary.total_loss || 0);
-
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 20;
-
-    // Reset pagination when timeframe changes
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [timeframe]);
 
     const totalPages = Math.ceil(items.length / itemsPerPage);
     const paginatedItems = items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);

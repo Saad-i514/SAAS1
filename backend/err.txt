@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-    import app.schemas
-  File "C:\Users\msaad\Documents\SAAS_PROD\backend\app\schemas\__init__.py", line 3, in <module>
-    from .supplier import Supplier, SupplierCreate, SupplierUpdate, SupplierInDB
-ImportError: cannot import name 'SupplierInDB' from 'app.schemas.supplier' (C:\Users\msaad\Documents\SAAS_PROD\backend\app\schemas\supplier.py)

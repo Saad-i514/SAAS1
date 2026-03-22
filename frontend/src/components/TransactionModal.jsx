@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { X, RefreshCcw } from 'lucide-react';
+import { X, RefreshCcw, RotateCcw } from 'lucide-react';
 
 function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
     const [formData, setFormData] = useState({

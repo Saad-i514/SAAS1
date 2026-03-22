@@ -1,7 +1,0 @@
-(psycopg2.errors.InvalidTextRepresentation) invalid input value for enum transactiontypeenum: "RETURN"
-LINE 1: ..._name, payment_term) VALUES (1, NULL, NULL, NULL, 'RETURN', ...
-                                                             ^
-
-[SQL: INSERT INTO transactions (company_id, supplier_id, transaction_id, order_no, type, date, previous_credit, debit, current_credit, discount, product_name, quantity, unit_price, customer_name, payment_term) VALUES (%(company_id)s, %(supplier_id)s, %(transaction_id)s, %(order_no)s, %(type)s, %(date)s, %(previous_credit)s, %(debit)s, %(current_credit)s, %(discount)s, %(product_name)s, %(quantity)s, %(unit_price)s, %(customer_name)s, %(payment_term)s) RETURNING transactions.id]
-[parameters: {'company_id': 1, 'supplier_id': None, 'transaction_id': None, 'order_no': None, 'type': 'RETURN', 'date': datetime.datetime(2026, 3, 21, 18, 55, 12, 126265), 'previous_credit': 0.0, 'debit': 0.0, 'current_credit': 0.0, 'discount': 0.0, 'product_name': None, 'quantity': 0, 'unit_price': 0.0, 'customer_name': None, 'payment_term': None}]
-(Background on this error at: https://sqlalche.me/e/20/9h9h)
