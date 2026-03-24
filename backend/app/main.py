@@ -19,11 +19,15 @@ cors_origins = [o.strip() for o in settings.BACKEND_CORS_ORIGINS.split(",") if o
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=cors_origins if cors_origins else ["*"],  # Allow all if not configured
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
+
+# Log CORS origins for debugging
+logger.info(f"CORS Origins configured: {cors_origins}")
+logger.info(f"BACKEND_CORS_ORIGINS env: {settings.BACKEND_CORS_ORIGINS}")
 
 from app.api.api import api_router
 

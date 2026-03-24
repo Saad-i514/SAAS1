@@ -23,10 +23,14 @@ function Login() {
     setError('');
     setLoading(true);
     try {
+      console.log('Attempting login with:', email);
+      console.log('API URL:', import.meta.env.VITE_API_URL);
       await login(email, password);
       await getCurrentUser();
       navigate('/');
     } catch (err) {
+      console.error('Login error:', err);
+      console.error('Error response:', err.response);
       setError(err.response?.data?.detail || 'Invalid email or password. Please try again.');
     } finally {
       setLoading(false);

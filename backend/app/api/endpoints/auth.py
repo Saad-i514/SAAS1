@@ -19,6 +19,16 @@ def login_access_token(
     OAuth2 compatible token login, get an access token for future requests
     """
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Login attempt for: {form_data.username}")
+    logger.info(f"User found: {user is not None}")
+    if user:
+        logger.info(f"User active: {user.is_active}")
+        logger.info(f"Password verification: {security.verify_password(form_data.password, user.hashed_password)}")
+    
     if not user or not security.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     elif not user.is_active:
