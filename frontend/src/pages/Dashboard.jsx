@@ -114,7 +114,7 @@ function Dashboard() {
 
   const isProfit = (summary?.profit || 0) >= (summary?.loss || 0);
   const fmt = (n) => Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  const fmtCurrency = (n) => `$${fmt(n)}`;
+  const fmtCurrency = (n) => `Rs ${fmt(n)}`;
 
   const txTypeConfig = {
     sale: { label: 'Sale', color: 'bg-emerald-100 text-emerald-700' },
