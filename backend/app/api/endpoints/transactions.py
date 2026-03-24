@@ -15,7 +15,7 @@ def read_transactions(
 ) -> Any:
     transactions = db.query(models.Transaction).filter(
         models.Transaction.company_id == current_user.company_id
-    ).offset(skip).limit(limit).order_by(models.Transaction.date.desc()).all()
+    ).order_by(models.Transaction.date.desc()).offset(skip).limit(limit).all()
     return transactions
 
 @router.post("/", response_model=schemas.transaction.Transaction)

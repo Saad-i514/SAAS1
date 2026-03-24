@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, FileText, FileSpreadsheet, Package, Users, Activity, CalendarClock, TrendingUp, TrendingDown, RefreshCcw, Printer } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet, Package, Users, Activity, CalendarClock, TrendingUp, TrendingDown, RefreshCcw, Printer, FileDown } from 'lucide-react';
 import api from '../services/api';
 
 function Reports() {
@@ -39,6 +39,139 @@ function Reports() {
         } catch (err) {
             console.error(err);
             alert('Failed to download report');
+        }
+    };
+
+    const downloadPdfReport = async (type) => {
+        try {
+            // Dynamically import jsPDF to avoid initial load bloat
+            const { jsPDF } = await import('jspdf');
+            const autoTable = (await import('jspdf-autotable')).default;
+            
+            const doc = new jsPDF();
+            const dateStr = new Date().toLocaleDateString();
+            
+            let data = [];
+            let endpoint = '';
+            let title = '';
+            let columns = [];
+            let rows = [];
+            let summary = null;
+
+            if (type === 'products') {
+                endpoint = '/products/';
+                title = 'Products Inventory Report';
+            } else if (type === 'suppliers') {
+                endpoint = '/suppliers/';
+                title = 'Suppliers Directory Report';
+            } else if (type === 'transactions') {
+                endpoint = '/transactions/';
+                title = 'Transaction History Report';
+            }
+
+            const response = await api.get(endpoint);
+            data = endpoint.includes('sales-summary') ? response.data.items : response.data;
+            
+            if (!data || data.length === 0) {
+                alert('No data available for this report.');
+                return;
+            }
+
+            // Format title
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+
+            if (type === 'products') {
+                columns = ['Article No', 'Name', 'Category', 'Status', 'In-Hand Qty', 'Purchase Price', 'Sale Price'];
+                let totalStock = 0;
+                let totalValue = 0;
+                rows = data.map(p => {
+                    totalStock += (p.in_hand_qty || 0);
+                    totalValue += (p.in_hand_qty || 0) * (p.product_price || 0);
+                    return [
+                        p.article_no || '-',
+                        p.name || '-',
+                        p.category || 'Uncategorized',
+                        p.status || '-',
+                        (p.in_hand_qty || 0).toString(),
+                        `$${(p.product_price || 0).toFixed(2)}`,
+                        `$${(p.sale_price || 0).toFixed(2)}`
+                    ];
+                });
+                summary = `Total Products Ranked: ${data.length} | Global Stock: ${totalStock} units | Est. Inventory Cost Value: $${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            } else if (type === 'suppliers') {
+                columns = ['Supplier No', 'Name', 'Email', 'Phone', 'Status'];
+                let activeCount = data.filter(s => s.status === 'Active').length;
+                rows = data.map(s => [
+                    s.supplier_no || '-',
+                    s.name || '-',
+                    s.email || '-',
+                    s.phone || '-',
+                    s.status || '-'
+                ]);
+                summary = `Total Regional Suppliers: ${data.length} | Active: ${activeCount} | Inactive: ${data.length - activeCount}`;
+            } else if (type === 'transactions') {
+                columns = ['Date', 'Type', 'Product', 'Qty', 'Unit Price', 'Total Amount', 'Order No'];
+                let totalQty = 0, totalSales = 0, totalPurchases = 0;
+                rows = data.map(t => {
+                    totalQty += (t.quantity || 0);
+                    const amount = (t.debit || 0);
+                    if (t.type === 'sale') totalSales += amount;
+                    else if (t.type === 'purchase') totalPurchases += amount;
+                    
+                    return [
+                        new Date(t.date).toLocaleDateString(),
+                        (t.type || '-').toUpperCase(),
+                        t.product_name || '-',
+                        (t.quantity || 0).toString(),
+                        `$${(t.unit_price || 0).toFixed(2)}`,
+                        `$${amount.toFixed(2)}`,
+                        t.order_no || '-'
+                    ];
+                });
+                summary = `Transactions Exported: ${data.length} | Total Items Moved: ${totalQty}\nTotal Sales Revenue: $${totalSales.toLocaleString(undefined, {minimumFractionDigits: 2})} | Total Purchase Costs: $${totalPurchases.toLocaleString(undefined, {minimumFractionDigits: 2})}\nNet Flow: $${(totalSales - totalPurchases).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            }
+
+            autoTable(doc, {
+                startY: 36,
+                head: [columns],
+                body: rows,
+                theme: 'striped',
+                headStyles: { fillColor: [79, 70, 229] },
+                margin: { top: 36 }
+            });
+
+            const finalY = doc.lastAutoTable.finalY + 15;
+            
+            // Add Summary Background Box
+            doc.setFillColor(245, 245, 245);
+            doc.rect(14, finalY - 5, 182, 30, 'F');
+            
+            doc.setFontSize(12);
+            doc.setTextColor(40);
+            doc.setFont("helvetica", "bold");
+            doc.text("Report Analytics Summary", 18, finalY + 2);
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(80);
+            
+            // Split summary by newlines
+            const summaryLines = summary.split('\n');
+            let currentY = finalY + 9;
+            summaryLines.forEach(line => {
+                doc.text(line, 18, currentY);
+                currentY += 6;
+            });
+
+            doc.save(`${type}_report_${dateStr.replace(/\//g, '-')}.pdf`);
+            
+        } catch (err) {
+            console.error(err);
+            alert('Failed to generate PDF report. Check console for details.');
         }
     };
 
@@ -89,13 +222,20 @@ function Reports() {
                                 <h3 className="text-lg font-bold text-gray-800 mb-2">{report.title}</h3>
                                 <p className="text-sm text-gray-500 mb-8 flex-1 leading-relaxed">{report.desc}</p>
 
-                                <div className="w-full flex space-x-3">
+                                <div className="w-full flex space-x-2 mt-4">
                                     <button
                                         onClick={() => downloadReport(report.type)}
-                                        className="flex-1 flex justify-center items-center py-2.5 px-4 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 text-gray-700 hover:text-indigo-700 rounded-xl transition-colors font-semibold text-sm shadow-sm group-hover:bg-indigo-600 group-hover:border-indigo-600 group-hover:text-white"
+                                        className="flex-1 flex justify-center items-center py-2 px-2 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 text-gray-700 hover:text-indigo-700 rounded-lg transition-colors font-semibold text-xs shadow-sm group-hover:bg-indigo-600 group-hover:border-indigo-600 group-hover:text-white"
                                     >
-                                        <FileSpreadsheet size={16} className="mr-2" />
+                                        <FileSpreadsheet size={14} className="mr-1.5" />
                                         CSV Export
+                                    </button>
+                                    <button
+                                        onClick={() => downloadPdfReport(report.type)}
+                                        className="flex-1 flex justify-center items-center py-2 px-2 bg-gray-50 hover:bg-rose-50 border border-gray-200 hover:border-rose-200 text-gray-700 hover:text-rose-700 rounded-lg transition-colors font-semibold text-xs shadow-sm group-hover:bg-rose-600 group-hover:border-rose-600 group-hover:text-white"
+                                    >
+                                        <FileDown size={14} className="mr-1.5" />
+                                        PDF Export
                                     </button>
                                 </div>
                             </div>
