@@ -33,6 +33,29 @@ def get_dashboard_summary(
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     company_id = current_user.company_id
+    
+    # If user has no company_id (SuperAdmin without company), get first company or return empty
+    if company_id is None:
+        first_company = db.query(models.Company).first()
+        if first_company:
+            company_id = first_company.id
+        else:
+            # Return empty dashboard if no companies exist
+            return {
+                "product_count": 0,
+                "supplier_count": 0,
+                "sales_amount": 0,
+                "cost_price": 0,
+                "profit": 0,
+                "loss": 0,
+                "sales_items": 0,
+                "returns_amount": 0,
+                "returns_items": 0,
+                "low_stock_count": 0,
+                "total_purchase": 0,
+                "timeframe": timeframe
+            }
+    
     start_date, now = get_date_range(timeframe)
 
     # Counts using efficient SQL aggregation
@@ -130,6 +153,19 @@ def get_dashboard_charts(
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     company_id = current_user.company_id
+    
+    # If user has no company_id, get first company or return empty
+    if company_id is None:
+        first_company = db.query(models.Company).first()
+        if first_company:
+            company_id = first_company.id
+        else:
+            return {
+                "monthly_sales": [],
+                "sales_distribution": [{"name": "No Data", "value": 1}],
+                "top_products": []
+            }
+    
     now = datetime.utcnow()
     monthly_sales = []
 
