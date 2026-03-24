@@ -15,38 +15,30 @@ app = FastAPI(
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
 
-# CORS Configuration - Allow specific origins
-# For production, we explicitly list allowed origins
+# CORS Configuration - Hardcoded allowed origins
+# This ensures CORS works consistently across all deployments
 cors_origins = [
     "https://bsmanagement.vercel.app",
-    "https://bizmanagement.vercel.app",
+    "https://bizmanagement.vercel.app", 
     "https://saas-1-pied.vercel.app",
     "https://saas-1-qqmz.vercel.app",
+    "https://saas-1-six.vercel.app",
+    "https://saas-1-orcin.vercel.app",
     "http://localhost:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5173",
 ]
 
-# Also check environment variable
-env_origins = settings.BACKEND_CORS_ORIGINS.strip()
-if env_origins and env_origins != "*":
-    additional_origins = [o.strip() for o in env_origins.split(",") if o.strip()]
-    cors_origins.extend(additional_origins)
-
-# Remove duplicates
-cors_origins = list(set(cors_origins))
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
 
 logger.info(f"CORS Origins configured: {cors_origins}")
-logger.info(f"BACKEND_CORS_ORIGINS env: {settings.BACKEND_CORS_ORIGINS}")
 
 from app.api.api import api_router
 
@@ -68,12 +60,7 @@ def cors_test():
     return {
         "message": "CORS is working!",
         "your_origin": "Check browser console",
-        "allowed_origins": [
-            "https://bsmanagement.vercel.app",
-            "https://bizmanagement.vercel.app",
-            "https://saas-1-pied.vercel.app",
-            "https://saas-1-qqmz.vercel.app",
-        ]
+        "allowed_origins": cors_origins
     }
 
 @app.get("/test-db")
