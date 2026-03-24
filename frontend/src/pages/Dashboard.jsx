@@ -92,17 +92,27 @@ function Dashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      console.log('Fetching dashboard data...');
+      console.log('API Base URL:', import.meta.env.VITE_API_URL);
+      
       const [summaryRes, chartsRes, recentRes] = await Promise.all([
         api.get(`/dashboard/summary?timeframe=${timeframe}`),
         api.get('/dashboard/charts'),
         api.get('/dashboard/recent-transactions?limit=8'),
       ]);
+      
+      console.log('Summary response:', summaryRes.data);
+      console.log('Charts response:', chartsRes.data);
+      console.log('Recent transactions:', recentRes.data);
+      
       setSummary(summaryRes.data);
       setCharts(chartsRes.data);
       setRecentTx(recentRes.data);
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Dashboard fetch failed:', err);
+      console.error('Error response:', err.response);
+      console.error('Error message:', err.message);
     } finally {
       setLoading(false);
     }
@@ -259,12 +269,12 @@ function Dashboard() {
               <p className="text-xs text-gray-500 mt-0.5">12-month sales vs purchases</p>
             </div>
           </div>
-          <div className="h-64 sm:h-72">
+          <div className="h-64 sm:h-72 min-h-[250px]">
             {loading ? (
               <div className="h-full bg-gray-50 rounded-xl animate-pulse" />
-            ) : (
+            ) : charts?.monthly_sales && charts.monthly_sales.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={charts?.monthly_sales || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <AreaChart data={charts.monthly_sales} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                   <defs>
                     <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
@@ -284,6 +294,10 @@ function Dashboard() {
                   <Area type="monotone" dataKey="purchases" stroke="#94a3b8" strokeWidth={2} fill="url(#purchaseGrad)" name="Purchases ($)" dot={false} activeDot={{ r: 4, fill: '#94a3b8' }} />
                 </AreaChart>
               </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <p className="text-sm">No data available</p>
+              </div>
             )}
           </div>
         </div>
@@ -294,10 +308,10 @@ function Dashboard() {
             <h3 className="text-base font-bold text-gray-900">Product Categories</h3>
             <p className="text-xs text-gray-500 mt-0.5">Distribution by count</p>
           </div>
-          <div className="h-40 sm:h-48">
+          <div className="h-40 sm:h-48 min-h-[180px]">
             {loading ? (
               <div className="h-full bg-gray-50 rounded-xl animate-pulse" />
-            ) : (
+            ) : charts?.sales_distribution && charts.sales_distribution.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -315,6 +329,10 @@ function Dashboard() {
                   <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontSize: '12px' }} />
                 </PieChart>
               </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <p className="text-sm">No categories</p>
+              </div>
             )}
           </div>
           {/* Legend */}
