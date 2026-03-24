@@ -14,42 +14,37 @@ app = FastAPI(
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
 
-# Parse CORS origins from comma-separated string
-cors_origins_str = settings.BACKEND_CORS_ORIGINS.strip()
+# CORS Configuration - Allow specific origins
+# For production, we explicitly list allowed origins
+cors_origins = [
+    "https://bsmanagement.vercel.app",
+    "https://bizmanagement.vercel.app",
+    "https://saas-1-pied.vercel.app",
+    "https://saas-1-qqmz.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+]
 
-# Check if wildcard is used
-if cors_origins_str == "*":
-    # For wildcard, we need to disable credentials
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=False,  # Must be False when using "*"
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
-    logger.info("CORS: Allowing all origins (wildcard)")
-else:
-    # Parse specific origins
-    cors_origins = [o.strip() for o in cors_origins_str.split(",") if o.strip()]
-    
-    # If no origins configured, allow all
-    if not cors_origins:
-        cors_origins = ["*"]
-        allow_creds = False
-    else:
-        allow_creds = True
-    
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_credentials=allow_creds,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
-    logger.info(f"CORS Origins configured: {cors_origins}")
+# Also check environment variable
+env_origins = settings.BACKEND_CORS_ORIGINS.strip()
+if env_origins and env_origins != "*":
+    additional_origins = [o.strip() for o in env_origins.split(",") if o.strip()]
+    cors_origins.extend(additional_origins)
 
+# Remove duplicates
+cors_origins = list(set(cors_origins))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
+logger.info(f"CORS Origins configured: {cors_origins}")
 logger.info(f"BACKEND_CORS_ORIGINS env: {settings.BACKEND_CORS_ORIGINS}")
 
 from app.api.api import api_router
