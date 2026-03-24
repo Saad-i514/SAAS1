@@ -1,352 +1,448 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
-import { Plus, Search, Edit2, Trash2, Save, X } from 'lucide-react';
-import DynamicColumnManager from '../components/DynamicColumnManager';
+import {
+  Plus, Search, Trash2, X, ChevronRight, Phone, Mail,
+  Building2, History, ArrowLeft, Package, DollarSign,
+  Tag, Calendar, TrendingUp, Filter
+} from 'lucide-react';
 
-function Suppliers() {
-    const [suppliers, setSuppliers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
-    const [customColumns, setCustomColumns] = useState([]);
+// ─── Supplier Sales History Modal ───────────────────────────────────────────
+function SupplierHistoryModal({ supplier, onClose }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('all');
 
-    // Form state
-    const [showAddForm, setShowAddForm] = useState(false);
-    const [formData, setFormData] = useState({ supplier_no: '', name: '', email: '', phone: '', status: 'Active', dynamic_data: {} });
-
-    const [columnFilters, setColumnFilters] = useState({});
-
-    // Inline edit state
-    const [editingCell, setEditingCell] = useState({ id: null, field: null });
-    const [editValue, setEditValue] = useState('');
-    const [userRole, setUserRole] = useState('Operator');
-
-    useEffect(() => {
-        const userData = localStorage.getItem('user');
-        if (userData) {
-            try { setUserRole(JSON.parse(userData).role); } catch (e) { }
-        }
-    }, []);
-
-    const fetchCustomColumns = async () => {
-        try {
-            const { data } = await api.get('/dynamic-columns/?table_name=suppliers');
-            setCustomColumns(data);
-        } catch (err) { console.error(err); }
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const res = await api.get(`/reports/supplier-sales/${supplier.id}`);
+        setData(res.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
+    fetch();
+  }, [supplier.id]);
 
-    const fetchSuppliers = async () => {
-        try {
-            const { data } = await api.get('/suppliers/');
-            setSuppliers(data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const categories = data ? ['all', ...data.category_summary.map(c => c.category)] : ['all'];
+  const filteredItems = data?.items?.filter(item =>
+    activeCategory === 'all' || item.category === activeCategory
+  ) || [];
 
-    useEffect(() => {
-        fetchCustomColumns();
-        fetchSuppliers();
-    }, []);
+  const txTypeColor = {
+    sale: 'bg-emerald-100 text-emerald-700',
+    purchase: 'bg-blue-100 text-blue-700',
+    reverse: 'bg-orange-100 text-orange-700',
+    return: 'bg-orange-100 text-orange-700',
+    payment: 'bg-purple-100 text-purple-700',
+  };
 
-    const handleAdd = async (e) => {
-        e.preventDefault();
-        try {
-            const { data } = await api.post('/suppliers/', formData);
-            setSuppliers([...suppliers, data]);
-            setShowAddForm(false);
-            setFormData({ supplier_no: '', name: '', email: '', phone: '', status: 'Active', dynamic_data: {} });
-        } catch (err) {
-            console.error(err);
-            alert('Failed to add supplier');
-        }
-    };
-
-    const handleCellClick = (supplier, field, isDynamic = false) => {
-        setEditingCell({ id: supplier.id, field, isDynamic });
-        setEditValue(isDynamic ? (supplier.dynamic_data?.[field] || '') : supplier[field]);
-    };
-
-    const handleCellSave = async (supplier) => {
-        if (!editingCell.id) return;
-
-        try {
-            const updatedData = { ...supplier };
-            if (editingCell.isDynamic) {
-                updatedData.dynamic_data = { ...updatedData.dynamic_data, [editingCell.field]: editValue };
-            } else {
-                updatedData[editingCell.field] = editValue;
-            }
-
-            const { data } = await api.put(`/suppliers/${supplier.id}`, updatedData);
-            setSuppliers(suppliers.map(s => s.id === supplier.id ? data : s));
-        } catch (err) {
-            console.error(err);
-            alert('Failed to update field');
-        } finally {
-            setEditingCell({ id: null, field: null });
-        }
-    };
-
-    const handleCellKeyDown = (e, supplier) => {
-        if (e.key === 'Enter') handleCellSave(supplier);
-        if (e.key === 'Escape') setEditingCell({ id: null, field: null });
-    };
-
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this supplier?')) return;
-        try {
-            await api.delete(`/suppliers/${id}`);
-            setSuppliers(suppliers.filter(s => s.id !== id));
-        } catch (err) {
-            console.error(err);
-            alert('Failed to delete supplier');
-        }
-    };
-
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 20;
-
-    const filteredSuppliers = suppliers.filter(s => {
-        // Global search
-        const matchesGlobal = Object.values(s).some(val =>
-            String(val).toLowerCase().includes(search.toLowerCase())
-        );
-        // Column filters
-        const matchesColumns = Object.keys(columnFilters).every(key => {
-            if (!columnFilters[key]) return true;
-
-            let val = s[key];
-            if (val === undefined && s.dynamic_data) val = s.dynamic_data[key];
-
-            return String(val || '').toLowerCase().includes(columnFilters[key].toLowerCase());
-        });
-
-        return matchesGlobal && matchesColumns;
-    });
-
-    const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
-    const paginatedSuppliers = filteredSuppliers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-    const totalColumnCount = 6 + customColumns.length; // 5 fixed columns + 1 actions column + custom columns
-
-    return (
-        <div className="space-y-6">
-            {userRole === 'SuperAdmin' && (
-                <DynamicColumnManager tableName="suppliers" onColumnAdded={fetchCustomColumns} />
-            )}
-
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center outline-none gap-4">
-                <h1 className="text-2xl font-bold text-gray-900">Suppliers</h1>
-                <button
-                    onClick={() => setShowAddForm(!showAddForm)}
-                    className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg flex items-center shadow-sm transition-all"
-                >
-                    {showAddForm ? <X size={20} className="mr-2" /> : <Plus size={20} className="mr-2" />}
-                    {showAddForm ? 'Cancel' : 'Add Supplier'}
-                </button>
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Building2 size={20} className="text-indigo-600 sm:w-[22px] sm:h-[22px]" />
             </div>
-
-            {showAddForm && (
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-top-4">
-                    <h2 className="text-lg font-semibold mb-6 text-gray-800 border-b border-gray-100 pb-3">Onboard New Supplier</h2>
-                    <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        <div className="col-span-1">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Supplier No</label>
-                            <input required placeholder="SUP-001" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.supplier_no} onChange={e => setFormData({ ...formData, supplier_no: e.target.value })} />
-                        </div>
-                        <div className="col-span-1 md:col-span-2">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Supplier Name</label>
-                            <input required placeholder="Global Traders Inc." className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                        </div>
-                        <div className="col-span-1">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-                            <input placeholder="contact@supplier.com" type="email" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                        </div>
-                        <div className="col-span-1">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-                            <input placeholder="+1 (555) 000-0000" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                        </div>
-                        <div className="col-span-1">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-                            <select className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-white font-medium text-gray-900" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                            </select>
-                        </div>
-                        {customColumns.map(col => (
-                            <div key={col.id} className="col-span-1">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2 capitalize">{col.column_name}</label>
-                                <input
-                                    placeholder="..."
-                                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none bg-gray-50/50 text-gray-900"
-                                    value={formData.dynamic_data[col.column_name] || ''}
-                                    onChange={e => setFormData({ ...formData, dynamic_data: { ...formData.dynamic_data, [col.column_name]: e.target.value } })}
-                                />
-                            </div>
-                        ))}
-                        <div className="lg:col-span-3 flex justify-end mt-4 pt-4 border-t border-gray-50">
-                            <button type="submit" className="bg-primary hover:bg-secondary text-white px-8 py-2.5 rounded-xl font-medium transition-colors shadow-sm transform hover:scale-[1.02]">
-                                Save Supplier
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 flex items-center bg-gray-50/50">
-                    <div className="relative w-full max-w-md">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search size={18} className="text-gray-400" />
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Search all columns..."
-                            className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-                        />
-                    </div>
-                </div>
-
-                <div className="overflow-x-auto min-h-[400px]">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-gray-50 text-gray-600 text-sm hidden lg:table-row font-medium uppercase tracking-wider border-b border-gray-200">
-                                {['supplier_no', 'name', 'email', 'phone', 'status'].map(field => (
-                                    <th key={field} className="p-4 align-top">
-                                        <div className="mb-2 capitalize">{field.replace('_', ' ')}</div>
-                                        <input
-                                            placeholder="Search..."
-                                            className="w-full text-xs p-1 border border-gray-300 rounded outline-none focus:border-indigo-500 font-normal bg-white text-gray-800"
-                                            value={columnFilters[field] || ''}
-                                            onChange={e => { setColumnFilters({ ...columnFilters, [field]: e.target.value }); setCurrentPage(1); }}
-                                        />
-                                    </th>
-                                ))}
-                                {customColumns.map(c => (
-                                    <th key={c.id} className="p-4 align-top">
-                                        <div className="mb-2">{c.column_name}</div>
-                                        <input
-                                            placeholder="Search..."
-                                            className="w-full text-xs p-1 border border-gray-300 rounded outline-none focus:border-indigo-500 font-normal bg-white text-gray-800"
-                                            value={columnFilters[c.column_name] || ''}
-                                            onChange={e => { setColumnFilters({ ...columnFilters, [c.column_name]: e.target.value }); setCurrentPage(1); }}
-                                        />
-                                    </th>
-                                ))}
-                                <th className="p-4 text-right align-top">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 text-gray-800">
-                            {loading ? (
-                                <tr><td colSpan={totalColumnCount} className="p-4 text-center text-gray-500">Loading data...</td></tr>
-                            ) : paginatedSuppliers.length === 0 ? (
-                                <tr><td colSpan={totalColumnCount} className="p-4 text-center text-gray-500 pb-8 pt-8">No suppliers found.</td></tr>
-                            ) : (
-                                paginatedSuppliers.map((supplier) => (
-                                    <tr key={supplier.id} className="hover:bg-gray-50/50 transition-colors group">
-                                        {/* Standard Columns */}
-                                        {['supplier_no', 'name', 'email', 'phone', 'status'].map(field => (
-                                            <td key={field} className="p-0 relative cursor-pointer group-hover:bg-indigo-50/30" onClick={() => handleCellClick(supplier, field)}>
-                                                {editingCell.id === supplier.id && editingCell.field === field ? (
-                                                    field === 'status' ? (
-                                                        <select
-                                                            autoFocus
-                                                            className="w-full h-full p-4 outline-none border-2 border-indigo-500 bg-white"
-                                                            value={supplier.status}
-                                                            onChange={async (e) => {
-                                                                const newStatus = e.target.value;
-                                                                setEditingCell({ id: null, field: null });
-                                                                try {
-                                                                    const { data } = await api.put(`/suppliers/${supplier.id}`, { ...supplier, status: newStatus });
-                                                                    setSuppliers(suppliers.map(s => s.id === supplier.id ? data : s));
-                                                                } catch(err) { alert('Failed to change status'); }
-                                                            }}
-                                                            onBlur={() => setEditingCell({ id: null, field: null })}
-                                                        >
-                                                            <option value="Active">Active</option>
-                                                            <option value="Inactive">Inactive</option>
-                                                        </select>
-                                                    ) : (
-                                                        <input
-                                                            autoFocus
-                                                            className="w-full h-full p-4 outline-none border-2 border-indigo-500 bg-white shadow-inner"
-                                                            value={editValue}
-                                                            onChange={e => setEditValue(e.target.value)}
-                                                            onBlur={() => handleCellSave(supplier)}
-                                                            onKeyDown={(e) => handleCellKeyDown(e, supplier)}
-                                                        />
-                                                    )
-                                                ) : (
-                                                    <div className={`p-4 ${field === 'supplier_no' ? 'font-medium text-gray-900' : 'text-gray-500'}`}>
-                                                        {field === 'status' ? (
-                                                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${supplier.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                                {supplier.status}
-                                                            </span>
-                                                        ) : (supplier[field] || '-')}
-                                                    </div>
-                                                )}
-                                            </td>
-                                        ))}
-
-                                        {/* Dynamic Columns */}
-                                        {customColumns.map(col => (
-                                            <td key={col.id} className="p-0 relative cursor-pointer group-hover:bg-indigo-50/30" onClick={() => handleCellClick(supplier, col.column_name, true)}>
-                                                {editingCell.id === supplier.id && editingCell.field === col.column_name ? (
-                                                    <input
-                                                        autoFocus
-                                                        className="w-full h-full p-4 outline-none border-2 border-indigo-500 bg-white shadow-inner"
-                                                        value={editValue}
-                                                        onChange={e => setEditValue(e.target.value)}
-                                                        onBlur={() => handleCellSave(supplier)}
-                                                        onKeyDown={(e) => handleCellKeyDown(e, supplier)}
-                                                    />
-                                                ) : (
-                                                    <div className="p-4 text-gray-500">{supplier.dynamic_data?.[col.column_name] || '-'}</div>
-                                                )}
-                                            </td>
-                                        ))}
-
-                                        <td className="p-4 text-right">
-                                            <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handleDelete(supplier.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between text-sm text-gray-500 font-medium">
-                    <span>Showing {paginatedSuppliers.length} of {filteredSuppliers.length} suppliers</span>
-                    {totalPages > 1 && (
-                        <div className="flex space-x-2 mt-4 sm:mt-0">
-                            <button 
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage(c => Math.max(1, c - 1))}
-                                className="px-3 py-1.5 border border-gray-200 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Previous
-                            </button>
-                            <span className="px-3 py-1.5 font-bold text-gray-700">Page {currentPage} of {totalPages}</span>
-                            <button 
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
-                                className="px-3 py-1.5 border border-gray-200 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Next
-                            </button>
-                        </div>
-                    )}
-                </div>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900 truncate">{supplier.name}</h2>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">{supplier.supplier_no} · {supplier.phone || 'No phone'}</p>
             </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+            <X size={18} />
+          </button>
         </div>
+
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : data ? (
+          <>
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 p-4 sm:p-6 border-b border-gray-100 flex-shrink-0">
+              <div className="text-center">
+                <p className="text-lg sm:text-2xl font-black text-gray-900">${Number(data.total_amount).toLocaleString()}</p>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">Total Amount</p>
+              </div>
+              <div className="text-center border-x border-gray-100">
+                <p className="text-lg sm:text-2xl font-black text-gray-900">{data.total_transactions}</p>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">Transactions</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg sm:text-2xl font-black text-gray-900">{data.total_qty}</p>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">Total Units</p>
+              </div>
+            </div>
+
+            {/* Category Summary */}
+            {data.category_summary.length > 0 && (
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 sm:mb-3">By Category</p>
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {data.category_summary.map((cat, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveCategory(activeCategory === cat.category ? 'all' : cat.category)}
+                      className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                        activeCategory === cat.category
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-indigo-300'
+                      }`}
+                    >
+                      <Tag size={11} />
+                      <span>{cat.category}</span>
+                      <span className={`px-1.5 py-0.5 rounded-md text-xs font-bold ${
+                        activeCategory === cat.category ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'
+                      }`}>{cat.transactions}</span>
+                    </button>
+                  ))}
+                  {activeCategory !== 'all' && (
+                    <button
+                      onClick={() => setActiveCategory('all')}
+                      className="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-700 transition-all"
+                    >
+                      <X size={11} />
+                      <span>Clear</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Transactions Table */}
+            <div className="flex-1 overflow-auto">
+              <table className="w-full text-xs sm:text-sm">
+                <thead className="sticky top-0 bg-gray-50 border-b border-gray-100">
+                  <tr className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left">Date</th>
+                    <th className="px-4 py-3 text-left">Type</th>
+                    <th className="px-4 py-3 text-left">Product</th>
+                    <th className="px-4 py-3 text-left">Category</th>
+                    <th className="px-4 py-3 text-center">Qty</th>
+                    <th className="px-4 py-3 text-right">Unit Price</th>
+                    <th className="px-4 py-3 text-right">Total</th>
+                    <th className="px-4 py-3 text-center">Payment</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filteredItems.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="px-4 py-12 text-center text-gray-400">
+                        <History size={32} className="mx-auto mb-2 opacity-50" />
+                        <p>No transactions found</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredItems.map((item, i) => (
+                      <tr key={i} className="hover:bg-gray-50/60 transition-colors">
+                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                          {item.date ? new Date(item.date).toLocaleDateString() : '-'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${txTypeColor[item.type] || 'bg-gray-100 text-gray-700'}`}>
+                            {item.type?.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-gray-900 max-w-[160px] truncate">{item.product_name || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md text-xs font-medium">{item.category}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center font-bold text-gray-700">{item.quantity}</td>
+                        <td className="px-4 py-3 text-right font-mono text-gray-600">${Number(item.unit_price).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-mono font-bold text-gray-900">${Number(item.total_amount).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${item.payment_term === 'Cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {item.payment_term || 'Cash'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-400">
+            <p>Failed to load history</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Suppliers Page ─────────────────────────────────────────────────────
+function Suppliers() {
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({ supplier_no: '', name: '', email: '', phone: '', status: 'Active' });
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  const fetchSuppliers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/suppliers/');
+      setSuppliers(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchSuppliers(); }, [fetchSuppliers]);
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    setFormError('');
+    setSubmitting(true);
+    try {
+      const { data } = await api.post('/suppliers/', formData);
+      setSuppliers(prev => [data, ...prev]);
+      setShowAddForm(false);
+      setFormData({ supplier_no: '', name: '', email: '', phone: '', status: 'Active' });
+    } catch (err) {
+      setFormError(err.response?.data?.detail || 'Failed to add supplier');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Delete supplier "${name}"? This cannot be undone.`)) return;
+    try {
+      await api.delete(`/suppliers/${id}`);
+      setSuppliers(prev => prev.filter(s => s.id !== id));
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to delete supplier');
+    }
+  };
+
+  const filtered = suppliers.filter(s => {
+    const matchSearch = !search || [s.name, s.supplier_no, s.email, s.phone].some(
+      v => String(v || '').toLowerCase().includes(search.toLowerCase())
     );
+    const matchStatus = statusFilter === 'all' || s.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+      {selectedSupplier && (
+        <SupplierHistoryModal
+          supplier={selectedSupplier}
+          onClose={() => setSelectedSupplier(null)}
+        />
+      )}
+
+      {/* Page Header */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-xl font-black text-gray-900">Suppliers</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{suppliers.length} total suppliers</p>
+        </div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <button
+            onClick={() => { setShowAddForm(!showAddForm); setFormError(''); }}
+            className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 sm:py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-indigo-500/20"
+          >
+            {showAddForm ? <X size={16} /> : <Plus size={16} />}
+            <span>{showAddForm ? 'Cancel' : 'Add Supplier'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Add Form */}
+      {showAddForm && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 animate-slide-up">
+          <h2 className="text-base font-bold text-gray-900 mb-5">New Supplier</h2>
+          {formError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium">{formError}</div>
+          )}
+          <form onSubmit={handleAdd} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Supplier No *</label>
+              <input required placeholder="SUP-001" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.supplier_no} onChange={e => setFormData(p => ({ ...p, supplier_no: e.target.value }))} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Supplier Name *</label>
+              <input required placeholder="Global Traders Inc." className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Email</label>
+              <input type="email" placeholder="contact@supplier.com" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.email} onChange={e => setFormData(p => ({ ...p, email: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Phone</label>
+              <input placeholder="+1 (555) 000-0000" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.phone} onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Status</label>
+              <select className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.status} onChange={e => setFormData(p => ({ ...p, status: e.target.value }))}>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row justify-end pt-2 space-y-2 sm:space-y-0 sm:space-x-2">
+              <button type="submit" disabled={submitting} className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-6 py-3 sm:py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm">
+                {submitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus size={16} />}
+                <span>Save Supplier</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search suppliers..."
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Filter size={14} className="text-gray-400" />
+            <select
+              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+              value={statusFilter}
+              onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="all">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50/80 border-b border-gray-100">
+              <tr className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left">Supplier</th>
+                <th className="px-5 py-3 text-left">Contact</th>
+                <th className="px-5 py-3 text-center">Status</th>
+                <th className="px-5 py-3 text-center">History</th>
+                <th className="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                [...Array(5)].map((_, i) => (
+                  <tr key={i}>
+                    <td colSpan="5" className="px-5 py-4">
+                      <div className="h-8 bg-gray-100 rounded-lg animate-pulse" />
+                    </td>
+                  </tr>
+                ))
+              ) : paginated.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-5 py-16 text-center">
+                    <Building2 size={40} className="mx-auto text-gray-300 mb-3" />
+                    <p className="text-gray-500 font-medium">No suppliers found</p>
+                    <p className="text-gray-400 text-xs mt-1">Try adjusting your search or filters</p>
+                  </td>
+                </tr>
+              ) : (
+                paginated.map(s => (
+                  <tr key={s.id} className="hover:bg-gray-50/60 transition-colors group">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <span className="text-indigo-700 font-black text-sm">{s.name[0]?.toUpperCase()}</span>
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900">{s.name}</p>
+                          <p className="text-xs text-gray-400 font-medium">{s.supplier_no}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="space-y-0.5">
+                        {s.email && (
+                          <div className="flex items-center space-x-1.5 text-xs text-gray-500">
+                            <Mail size={11} />
+                            <span>{s.email}</span>
+                          </div>
+                        )}
+                        {s.phone && (
+                          <div className="flex items-center space-x-1.5 text-xs text-gray-500">
+                            <Phone size={11} />
+                            <span>{s.phone}</span>
+                          </div>
+                        )}
+                        {!s.email && !s.phone && <span className="text-xs text-gray-300">No contact info</span>}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-center">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+                        s.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${s.status === 'Active' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                        {s.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-center">
+                      <button
+                        onClick={() => setSelectedSupplier(s)}
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-all border border-indigo-200"
+                      >
+                        <History size={12} />
+                        <span>View History</span>
+                      </button>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <button
+                        onClick={() => handleDelete(s.id, s.name)}
+                        className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500 font-medium">
+          <span>Showing {paginated.length} of {filtered.length} suppliers</span>
+          {totalPages > 1 && (
+            <div className="flex items-center space-x-1">
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Prev</button>
+              <span className="px-3 py-1.5 font-bold text-gray-700">{currentPage} / {totalPages}</span>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default Suppliers;
