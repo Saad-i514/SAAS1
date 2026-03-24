@@ -17,12 +17,17 @@ app = FastAPI(
 # Parse CORS origins from comma-separated string
 cors_origins = [o.strip() for o in settings.BACKEND_CORS_ORIGINS.split(",") if o.strip()]
 
+# If no CORS origins configured, allow all for development
+if not cors_origins:
+    cors_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins if cors_origins else ["*"],  # Allow all if not configured
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Log CORS origins for debugging
@@ -37,6 +42,19 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy"}
+    return {"status": "healthy", "cors_origins": settings.BACKEND_CORS_ORIGINS}
+
+@app.get("/test-db")
+def test_database():
+    """Test database connection"""
+    try:
+        from app.core.database import SessionLocal
+        from app.models import User
+        db = SessionLocal()
+        user_count = db.query(User).count()
+        db.close()
+        return {"status": "connected", "user_count": user_count}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
