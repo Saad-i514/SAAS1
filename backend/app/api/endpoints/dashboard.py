@@ -85,6 +85,8 @@ def get_dashboard_summary(
         # Get cost price via JOIN with products
         cost_agg = db.query(
             func.sum(models.Product.product_price * models.Transaction.quantity).label("total_cost")
+        ).select_from(
+            models.Transaction
         ).join(
             models.Product,
             and_(
