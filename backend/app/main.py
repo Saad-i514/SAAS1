@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.core.config import settings
 import logging
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -55,7 +56,25 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "cors_origins": settings.BACKEND_CORS_ORIGINS}
+    return {
+        "status": "healthy", 
+        "cors_origins": settings.BACKEND_CORS_ORIGINS,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+@app.get("/cors-test")
+def cors_test():
+    """Test CORS configuration"""
+    return {
+        "message": "CORS is working!",
+        "your_origin": "Check browser console",
+        "allowed_origins": [
+            "https://bsmanagement.vercel.app",
+            "https://bizmanagement.vercel.app",
+            "https://saas-1-pied.vercel.app",
+            "https://saas-1-qqmz.vercel.app",
+        ]
+    }
 
 @app.get("/test-db")
 def test_database():
