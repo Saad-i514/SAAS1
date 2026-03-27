@@ -41,12 +41,12 @@ class Supplier(Base):
     __tablename__ = "suppliers"
     
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     supplier_no = Column(String, index=True, nullable=False)
     name = Column(String, index=True, nullable=False)
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
-    status = Column(String, default="Active")
+    status = Column(String, default="Active", index=True)
     dynamic_data = Column(JSONB, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -58,14 +58,14 @@ class Product(Base):
     __tablename__ = "products"
     
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     article_no = Column(String, index=True, nullable=False)
     name = Column(String, index=True, nullable=False)
     product_price = Column(Float, default=0.0)
     sale_price = Column(Float, default=0.0)
     in_hand_qty = Column(Integer, default=0)
     category = Column(String, index=True, nullable=True)
-    status = Column(String, default="Active")
+    status = Column(String, default="Active", index=True)
     dynamic_data = Column(JSONB, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -83,13 +83,13 @@ class Transaction(Base):
     __tablename__ = "transactions"
     
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
-    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True) # Nullable for sales to random customers if not tracked
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True, index=True) # Nullable for sales to random customers if not tracked
     
     transaction_id = Column(String, index=True, nullable=True) # generated or provided
     order_no = Column(String, index=True, nullable=True)
-    type = Column(Enum(TransactionTypeEnum), nullable=False)
-    date = Column(DateTime, default=datetime.utcnow)
+    type = Column(Enum(TransactionTypeEnum), nullable=False, index=True)
+    date = Column(DateTime, default=datetime.utcnow, index=True)
     
     # Financial details
     previous_credit = Column(Float, default=0.0)
@@ -98,11 +98,11 @@ class Transaction(Base):
     discount = Column(Float, default=0.0)
     
     # Inventory details
-    product_name = Column(String, nullable=True) # Could link to Product directly, but denormalizing for history is safer
+    product_name = Column(String, nullable=True, index=True) # Could link to Product directly, but denormalizing for history is safer
     quantity = Column(Integer, default=0)
     unit_price = Column(Float, default=0.0)
     
-    customer_name = Column(String, nullable=True) # for sales
+    customer_name = Column(String, nullable=True, index=True) # for sales
     payment_term = Column(String, nullable=True) # Cash / Credit
     
     company = relationship("Company", back_populates="transactions")

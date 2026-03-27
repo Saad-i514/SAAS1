@@ -1,11 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import Response
 from app.core.config import settings
 import logging
 from datetime import datetime
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,73 +15,68 @@ app = FastAPI(
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
 
-# CORS Configuration - Hardcoded allowed origins
-# This ensures CORS works consistently across all deployments
-cors_origins = [
-    "https://bsmanagement.vercel.app",
-    "https://bizmanagement.vercel.app", 
-    "https://saas-1-pied.vercel.app",
-    "https://saas-1-qqmz.vercel.app",
-    "https://saas-1-six.vercel.app",
-    "https://saas-1-orcin.vercel.app",
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5173",
-]
+# ── Security Headers Middleware ──────────────────────────────────────────────
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+# ── CORS ─────────────────────────────────────────────────────────────────────
+# Load CORS origins from environment variable with fallback for existing deployments
+cors_origins_str = settings.BACKEND_CORS_ORIGINS
+cors_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
+
+# Fallback: If no origins configured, use existing Vercel domains (backward compatibility)
+if not cors_origins or cors_origins == ['']:
+    cors_origins = [
+        "https://bsmanagement.vercel.app",
+        "https://bizmanagement.vercel.app",
+        "https://saas-1-pied.vercel.app",
+        "https://saas-1-qqmz.vercel.app",
+        "https://saas-1-six.vercel.app",
+        "https://saas-1-orcin.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:5174",
+    ]
+    logger.warning("⚠️ BACKEND_CORS_ORIGINS not set, using default Vercel domains")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
+    expose_headers=["Content-Type"],
     max_age=3600,
 )
 
-logger.info(f"CORS Origins configured: {cors_origins}")
+logger.info(f"CORS configured for {len(cors_origins)} origins")
 
-# Additional CORS headers middleware as fallback
-class CORSHeaderMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        origin = request.headers.get("origin")
-        if origin in cors_origins:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-            response.headers["Access-Control-Allow-Headers"] = "*"
-            response.headers["Access-Control-Expose-Headers"] = "*"
-        return response
+# ── Routes ────────────────────────────────────────────────────────────────────
+from app.api.api import api_router  # noqa: E402 (import after app creation)
 
-app.add_middleware(CORSHeaderMiddleware)
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
-from app.api.api import api_router
 
 @app.get("/")
 def root():
     return {"message": f"Welcome to {settings.PROJECT_NAME} API", "version": "1.0.0"}
 
+
 @app.get("/health")
 def health_check():
     return {
-        "status": "healthy", 
-        "cors_origins": settings.BACKEND_CORS_ORIGINS,
-        "timestamp": datetime.utcnow().isoformat()
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
-@app.get("/cors-test")
-def cors_test():
-    """Test CORS configuration"""
-    return {
-        "message": "CORS is working!",
-        "your_origin": "Check browser console",
-        "allowed_origins": cors_origins
-    }
 
 @app.get("/test-db")
 def test_database():
-    """Test database connection"""
     try:
         from app.core.database import SessionLocal
         from app.models import User
@@ -93,5 +86,3 @@ def test_database():
         return {"status": "connected", "user_count": user_count}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-
-app.include_router(api_router, prefix=settings.API_V1_STR)

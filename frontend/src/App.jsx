@@ -8,6 +8,7 @@ import Suppliers from './pages/Suppliers';
 import Products from './pages/Products';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -25,8 +26,6 @@ const RoleBasedIndexRoute = () => {
   }
   return role === 'SuperAdmin' ? <SuperAdminDashboard /> : <Dashboard />;
 };
-
-import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   return (

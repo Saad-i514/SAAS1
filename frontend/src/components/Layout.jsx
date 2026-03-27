@@ -4,7 +4,7 @@ import { logout } from '../services/authService';
 import {
   LayoutDashboard, Users as UsersIcon, Package, LogOut,
   FileText, Building2, UserCog, Menu, X, TrendingUp,
-  ChevronRight, Bell, Settings, Search
+  ChevronRight, Bell
 } from 'lucide-react';
 import Chatbot from './Chatbot';
 

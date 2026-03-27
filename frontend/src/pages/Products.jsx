@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
-import { Plus, Search, Edit2, Trash2, X, Activity, Package, AlertTriangle, Filter, ChevronDown } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Activity, Package, AlertTriangle, Users } from 'lucide-react';
 import TransactionModal from '../components/TransactionModal';
+import BulkTransactionModal from '../components/BulkTransactionModal';
+import CustomerSearchModal from '../components/CustomerSearchModal';
+
+// Common product categories — user can also type a custom one
+const PRESET_CATEGORIES = [
+  'Electronics', 'Clothing', 'Food & Beverages', 'Furniture',
+  'Stationery', 'Hardware', 'Cosmetics', 'Medicine', 'Toys',
+  'Sports', 'Automotive', 'Books', 'Other',
+];
 
 function Products() {
   const [products, setProducts] = useState([]);
@@ -12,10 +21,13 @@ function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [formData, setFormData] = useState({
     article_no: '', name: '', category: '', product_price: '',
     sale_price: '', in_hand_qty: '', status: 'Active'
   });
+  const [customCategory, setCustomCategory] = useState('');
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,10 +47,14 @@ function Products() {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  const categories = ['all', ...new Set(products.map(p => p.category).filter(Boolean))];
+  // Merge preset + existing categories from DB
+  const dbCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+  const allCategories = [...new Set([...PRESET_CATEGORIES, ...dbCategories])].sort();
+  const filterCategories = ['all', ...new Set(products.map(p => p.category).filter(Boolean))];
 
   const openModal = (product = null) => {
     setFormError('');
+    setCustomCategory('');
     if (product) {
       setFormData({
         article_no: product.article_no || '',
@@ -57,13 +73,18 @@ function Products() {
     setIsModalOpen(true);
   };
 
+  // Resolve final category: if "custom" selected, use customCategory text
+  const resolvedCategory = formData.category === '__custom__' ? customCategory : formData.category;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
+    if (!resolvedCategory) { setFormError('Please select or enter a category.'); return; }
     setSubmitting(true);
     try {
       const payload = {
         ...formData,
+        category: resolvedCategory,
         product_price: parseFloat(formData.product_price) || 0,
         sale_price: parseFloat(formData.sale_price) || 0,
         in_hand_qty: parseInt(formData.in_hand_qty) || 0,
@@ -104,7 +125,6 @@ function Products() {
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   const lowStockCount = products.filter(p => p.in_hand_qty <= 5 && p.status === 'Active').length;
 
   return (
@@ -123,29 +143,33 @@ function Products() {
             )}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <button
-            onClick={() => setShowTransactionModal(true)}
-            className="flex items-center justify-center space-x-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-3 sm:py-2.5 rounded-xl font-semibold text-sm transition-all border border-indigo-200"
-          >
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setShowCustomerSearch(true)}
+            className="flex items-center justify-center space-x-2 bg-purple-50 hover:bg-purple-100 text-purple-700 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all border border-purple-200">
+            <Users size={16} />
+            <span>Customer Search</span>
+          </button>
+          <button onClick={() => setShowBulkModal(true)}
+            className="flex items-center justify-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all border border-emerald-200">
+            <Activity size={16} />
+            <span>Bulk Order</span>
+          </button>
+          <button onClick={() => setShowTransactionModal(true)}
+            className="flex items-center justify-center space-x-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all border border-indigo-200">
             <Activity size={16} />
             <span>Quick Transaction</span>
           </button>
-          <button
-            onClick={() => openModal()}
-            className="flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 sm:py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-indigo-500/20"
-          >
+          <button onClick={() => openModal()}
+            className="flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-indigo-500/20">
             <Plus size={16} />
             <span>Add Product</span>
           </button>
         </div>
       </div>
 
-      <TransactionModal
-        isOpen={showTransactionModal}
-        onClose={() => setShowTransactionModal(false)}
-        onSuccess={fetchProducts}
-      />
+      <TransactionModal isOpen={showTransactionModal} onClose={() => setShowTransactionModal(false)} onSuccess={fetchProducts} />
+      <BulkTransactionModal isOpen={showBulkModal} onClose={() => setShowBulkModal(false)} onSuccess={fetchProducts} />
+      <CustomerSearchModal isOpen={showCustomerSearch} onClose={() => setShowCustomerSearch(false)} />
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
@@ -170,10 +194,22 @@ function Products() {
                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Product Name *</label>
                   <input required placeholder="Premium Widget" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Category</label>
-                  <input placeholder="Electronics" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.category} onChange={e => setFormData(p => ({ ...p, category: e.target.value }))} />
+
+                {/* Category — required dropdown with custom option */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Category *</label>
+                  <select required className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    value={formData.category} onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}>
+                    <option value="">— Select a category —</option>
+                    {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                    <option value="__custom__">+ Enter custom category</option>
+                  </select>
+                  {formData.category === '__custom__' && (
+                    <input required placeholder="Type category name..." className="mt-2 w-full px-3 py-2.5 bg-gray-50 border border-indigo-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                      value={customCategory} onChange={e => setCustomCategory(e.target.value)} />
+                  )}
                 </div>
+
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Status</label>
                   <select className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.status} onChange={e => setFormData(p => ({ ...p, status: e.target.value }))}>
@@ -186,14 +222,13 @@ function Products() {
                   <input type="number" min="0" placeholder="0" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.in_hand_qty} onChange={e => setFormData(p => ({ ...p, in_hand_qty: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Purchase Price ($) *</label>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Purchase Price (Rs) *</label>
                   <input required type="number" min="0" step="0.01" placeholder="0.00" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.product_price} onChange={e => setFormData(p => ({ ...p, product_price: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Sale Price ($) *</label>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Sale Price (Rs) *</label>
                   <input required type="number" min="0" step="0.01" placeholder="0.00" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.sale_price} onChange={e => setFormData(p => ({ ...p, sale_price: e.target.value }))} />
                 </div>
-                {/* Margin preview */}
                 {formData.product_price && formData.sale_price && (
                   <div className="sm:col-span-2 lg:col-span-3">
                     <div className={`p-3 rounded-xl text-sm font-semibold flex items-center justify-between ${
@@ -203,7 +238,7 @@ function Products() {
                     }`}>
                       <span>Margin Preview</span>
                       <span>
-                        ${(parseFloat(formData.sale_price) - parseFloat(formData.product_price)).toFixed(2)} per unit
+                        Rs {(parseFloat(formData.sale_price) - parseFloat(formData.product_price)).toFixed(2)} per unit
                         ({parseFloat(formData.product_price) > 0
                           ? (((parseFloat(formData.sale_price) - parseFloat(formData.product_price)) / parseFloat(formData.product_price)) * 100).toFixed(1)
                           : 0}%)
@@ -226,33 +261,19 @@ function Products() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* Toolbar */}
         <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-              value={search}
-              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-            />
+            <input type="text" placeholder="Search products..." className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+              value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
           </div>
           <div className="flex items-center space-x-2">
-            <select
-              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-              value={categoryFilter}
-              onChange={e => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-            >
-              {categories.map(c => (
-                <option key={c} value={c}>{c === 'all' ? 'All Categories' : c}</option>
-              ))}
+            <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+              value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setCurrentPage(1); }}>
+              {filterCategories.map(c => <option key={c} value={c}>{c === 'all' ? 'All Categories' : c}</option>)}
             </select>
-            <select
-              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            >
+            <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+              value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
               <option value="all">All Status</option>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
@@ -277,20 +298,13 @@ function Products() {
             <tbody className="divide-y divide-gray-50">
               {loading ? (
                 [...Array(5)].map((_, i) => (
-                  <tr key={i}>
-                    <td colSpan="8" className="px-5 py-4">
-                      <div className="h-8 bg-gray-100 rounded-lg animate-pulse" />
-                    </td>
-                  </tr>
+                  <tr key={i}><td colSpan="8" className="px-5 py-4"><div className="h-8 bg-gray-100 rounded-lg animate-pulse" /></td></tr>
                 ))
               ) : paginated.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-5 py-16 text-center">
-                    <Package size={40} className="mx-auto text-gray-300 mb-3" />
-                    <p className="text-gray-500 font-medium">No products found</p>
-                    <p className="text-gray-400 text-xs mt-1">Try adjusting your search or filters</p>
-                  </td>
-                </tr>
+                <tr><td colSpan="8" className="px-5 py-16 text-center">
+                  <Package size={40} className="mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-500 font-medium">No products found</p>
+                </td></tr>
               ) : (
                 paginated.map(p => {
                   const margin = p.sale_price - p.product_price;
@@ -308,16 +322,10 @@ function Products() {
                           {p.category || 'Uncategorized'}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right font-mono text-gray-600 font-medium">
-                        ${Number(p.product_price || 0).toFixed(2)}
-                      </td>
-                      <td className="px-5 py-3.5 text-right font-mono font-bold text-gray-900">
-                        ${Number(p.sale_price || 0).toFixed(2)}
-                      </td>
+                      <td className="px-5 py-3.5 text-right font-mono text-gray-600 font-medium">Rs {Number(p.product_price || 0).toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-right font-mono font-bold text-gray-900">Rs {Number(p.sale_price || 0).toFixed(2)}</td>
                       <td className="px-5 py-3.5 text-right">
-                        <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
-                          margin > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                        }`}>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-lg ${margin > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                           {margin >= 0 ? '+' : ''}{marginPct}%
                         </span>
                       </td>
@@ -326,26 +334,18 @@ function Products() {
                           p.in_hand_qty > 10 ? 'bg-emerald-100 text-emerald-800'
                           : p.in_hand_qty > 0 ? 'bg-amber-100 text-amber-800'
                           : 'bg-red-100 text-red-800'
-                        }`}>
-                          {p.in_hand_qty}
-                        </span>
+                        }`}>{p.in_hand_qty}</span>
                       </td>
                       <td className="px-5 py-3.5 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
-                          p.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
-                        }`}>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${p.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                           <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${p.status === 'Active' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
                           {p.status}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => openModal(p)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit">
-                            <Edit2 size={14} />
-                          </button>
-                          <button onClick={() => handleDelete(p.id, p.name)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Delete">
-                            <Trash2 size={14} />
-                          </button>
+                          <button onClick={() => openModal(p)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><Edit2 size={14} /></button>
+                          <button onClick={() => handleDelete(p.id, p.name)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={14} /></button>
                         </div>
                       </td>
                     </tr>
@@ -356,7 +356,6 @@ function Products() {
           </table>
         </div>
 
-        {/* Pagination */}
         <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500 font-medium">
           <span>Showing {paginated.length} of {filtered.length} products</span>
           {totalPages > 1 && (

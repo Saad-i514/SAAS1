@@ -25,7 +25,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
     payment_term: 'Cash',
     debit: 0,
     customer_name: '',
-    add_to_stock: true,
+    add_to_stock: false,
     order_no: '',
     discount: 0,
   });
@@ -88,10 +88,35 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
     setError('');
     setLoading(true);
 
+    const qty = parseInt(formData.quantity) || 0;
+    const price = parseFloat(formData.unit_price) || 0;
+    const disc = parseFloat(formData.discount) || 0;
+
+    if (qty <= 0) {
+      setError('Quantity must be at least 1.');
+      setLoading(false);
+      return;
+    }
+    if (price < 0) {
+      setError('Unit price cannot be negative.');
+      setLoading(false);
+      return;
+    }
+    if (disc < 0) {
+      setError('Discount cannot be negative.');
+      setLoading(false);
+      return;
+    }
+    if (disc > qty * price) {
+      setError('Discount cannot exceed the total amount.');
+      setLoading(false);
+      return;
+    }
+
     // Validate stock for sales
     if (formData.type === 'sale') {
       const product = products.find(p => p.name === formData.product_name);
-      if (product && product.in_hand_qty < parseInt(formData.quantity)) {
+      if (product && product.in_hand_qty < qty) {
         setError(`Insufficient stock. Available: ${product.in_hand_qty} units`);
         setLoading(false);
         return;
@@ -277,7 +302,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
 
               {/* Unit Price */}
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Unit Price ($) *</label>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Unit Price (Rs) *</label>
                 <input
                   type="number"
                   required
@@ -291,7 +316,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
 
               {/* Discount */}
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Discount ($)</label>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Discount (Rs)</label>
                 <input
                   type="number"
                   min="0"
@@ -321,11 +346,11 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
             <div className={`rounded-xl p-4 border-2 ${colors.active}`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold">Total Amount</span>
-                <span className="text-2xl font-black">${Number(formData.debit).toFixed(2)}</span>
+                <span className="text-2xl font-black">Rs {Number(formData.debit).toFixed(2)}</span>
               </div>
               {parseFloat(formData.discount) > 0 && (
                 <p className="text-xs mt-1 opacity-70">
-                  Subtotal: ${(parseFloat(formData.quantity || 0) * parseFloat(formData.unit_price || 0)).toFixed(2)} — Discount: ${parseFloat(formData.discount).toFixed(2)}
+                  Subtotal: Rs {(parseFloat(formData.quantity || 0) * parseFloat(formData.unit_price || 0)).toFixed(2)} — Discount: Rs {parseFloat(formData.discount).toFixed(2)}
                 </p>
               )}
             </div>

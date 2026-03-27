@@ -1,14 +1,17 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell, Area, AreaChart
 } from 'recharts';
 import api from '../services/api';
+import { useRealtimeUpdates } from '../services/useRealtimeUpdates';
 import {
   DollarSign, ShoppingCart, TrendingUp, TrendingDown, Package,
   RotateCcw, AlertTriangle, ArrowUpRight, ArrowDownRight,
-  RefreshCw, Calendar, Boxes, Users, Activity
+  RefreshCw, Boxes, Users, Activity, Wifi
 } from 'lucide-react';
+import BulkTransactionModal from '../components/BulkTransactionModal';
+import CustomerSearchModal from '../components/CustomerSearchModal';
 
 const CHART_COLORS = ['#6366f1', '#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#3b82f6', '#10b981'];
 
@@ -72,7 +75,7 @@ const CustomTooltip = ({ active, payload, label }) => {
           <div key={i} className="flex items-center space-x-2 mb-1">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
             <span className="text-gray-600">{p.name}:</span>
-            <span className="font-bold text-gray-900">${Number(p.value).toLocaleString()}</span>
+            <span className="font-bold text-gray-900">Rs {Number(p.value).toLocaleString()}</span>
           </div>
         ))}
       </div>
@@ -88,39 +91,38 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState('monthly');
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [liveEvent, setLiveEvent] = useState(null);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('Fetching dashboard data...');
-      console.log('API Base URL:', import.meta.env.VITE_API_URL);
-      
       const [summaryRes, chartsRes, recentRes] = await Promise.all([
         api.get(`/dashboard/summary?timeframe=${timeframe}`),
         api.get('/dashboard/charts'),
         api.get('/dashboard/recent-transactions?limit=8'),
       ]);
-      
-      console.log('Summary response:', summaryRes.data);
-      console.log('Charts response:', chartsRes.data);
-      console.log('Recent transactions:', recentRes.data);
-      
       setSummary(summaryRes.data);
       setCharts(chartsRes.data);
       setRecentTx(recentRes.data);
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Dashboard fetch failed:', err);
-      console.error('Error response:', err.response);
-      console.error('Error message:', err.message);
     } finally {
       setLoading(false);
     }
   }, [timeframe]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Real-time updates via SSE — auto-refresh when a new transaction is recorded
+  const debounceRef = useRef(null);
+  useRealtimeUpdates((event) => {
+    setLiveEvent(event);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchData(), 1500);
+  });
 
   const isProfit = (summary?.profit || 0) >= (summary?.loss || 0);
   const fmt = (n) => Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -140,35 +142,46 @@ function Dashboard() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Business Overview</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
-            {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Loading data...'}
+          <p className="text-gray-500 text-sm mt-0.5 flex items-center space-x-2">
+            <span>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Loading data...'}</span>
+            {liveEvent && (
+              <span className="inline-flex items-center space-x-1 text-emerald-600 text-xs font-semibold">
+                <Wifi size={11} />
+                <span>Live</span>
+              </span>
+            )}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
-          >
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setShowCustomerSearch(true)}
+            className="flex items-center space-x-2 bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-2 rounded-xl border border-purple-200 font-semibold text-sm transition-all">
+            <Users size={15} />
+            <span className="hidden sm:inline">Customer Search</span>
+          </button>
+          <button onClick={() => setShowBulkModal(true)}
+            className="flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-2 rounded-xl border border-emerald-200 font-semibold text-sm transition-all">
+            <ShoppingCart size={15} />
+            <span className="hidden sm:inline">Bulk Order</span>
+          </button>
+          <button onClick={fetchData} disabled={loading}
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
           <div className="flex items-center bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
             {TIMEFRAMES.map(tf => (
-              <button
-                key={tf.key}
-                onClick={() => setTimeframe(tf.key)}
+              <button key={tf.key} onClick={() => setTimeframe(tf.key)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${
-                  timeframe === tf.key
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
+                  timeframe === tf.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                }`}>
                 {tf.label}
               </button>
             ))}
           </div>
         </div>
       </div>
+
+      <BulkTransactionModal isOpen={showBulkModal} onClose={() => setShowBulkModal(false)} onSuccess={fetchData} />
+      <CustomerSearchModal isOpen={showCustomerSearch} onClose={() => setShowCustomerSearch(false)} />
 
       {/* KPI Cards */}
       {loading ? (
@@ -290,8 +303,8 @@ function Dashboard() {
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px', fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="sales" stroke="#6366f1" strokeWidth={2.5} fill="url(#salesGrad)" name="Sales ($)" dot={false} activeDot={{ r: 5, fill: '#6366f1' }} />
-                  <Area type="monotone" dataKey="purchases" stroke="#94a3b8" strokeWidth={2} fill="url(#purchaseGrad)" name="Purchases ($)" dot={false} activeDot={{ r: 4, fill: '#94a3b8' }} />
+                  <Area type="monotone" dataKey="sales" stroke="#6366f1" strokeWidth={2.5} fill="url(#salesGrad)" name="Sales (Rs)" dot={false} activeDot={{ r: 5, fill: '#6366f1' }} />
+                  <Area type="monotone" dataKey="purchases" stroke="#94a3b8" strokeWidth={2} fill="url(#purchaseGrad)" name="Purchases (Rs)" dot={false} activeDot={{ r: 4, fill: '#94a3b8' }} />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -426,7 +439,7 @@ function Dashboard() {
                       <p className="text-xs text-gray-400">{tx.date ? new Date(tx.date).toLocaleDateString() : ''}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-bold text-gray-900">${Number(tx.debit || 0).toLocaleString()}</p>
+                      <p className="text-sm font-bold text-gray-900">Rs {Number(tx.debit || 0).toLocaleString()}</p>
                       <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-md ${cfg.color}`}>{cfg.label}</span>
                     </div>
                   </div>

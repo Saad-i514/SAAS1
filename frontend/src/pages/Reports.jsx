@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Download, FileText, FileSpreadsheet, Package, Users, Activity,
-  TrendingUp, TrendingDown, RefreshCcw, Printer, FileDown,
-  Calendar, DollarSign, BarChart2
+  Download, FileSpreadsheet, Package, Users, Activity,
+  RefreshCcw, Printer, FileDown,
+  BarChart2, ShoppingBag
 } from 'lucide-react';
 import api from '../services/api';
+import CustomerSearchModal from '../components/CustomerSearchModal';
 
 const TIMEFRAMES = [
   { key: 'daily', label: 'Today' },
@@ -20,6 +21,7 @@ function Reports() {
   const [viewMode, setViewMode] = useState('sales');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const itemsPerPage = 25;
 
   const fetchReportData = useCallback(async () => {
@@ -113,11 +115,11 @@ function Reports() {
         rows = data.map(s => [s.supplier_no, s.name, s.email || '-', s.phone || '-', s.status]);
         summaryText = `Total: ${data.length} suppliers | Active: ${active} | Inactive: ${data.length - active}`;
       } else if (type === 'transactions') {
-        columns = ['Date', 'Type', 'Product', 'Qty', 'Unit Price', 'Total', 'Order No'];
+        columns = ['Date', 'Type', 'Product', 'Qty', 'Unit Price', 'Discount', 'Net Amount', 'Order No'];
         let totalQty = 0, totalSales = 0, totalPurchases = 0;
         rows = data.map(t => {
           totalQty += t.quantity || 0;
-          const amount = (t.unit_price || 0) * (t.quantity || 0);
+          const amount = t.debit || 0; // stored net amount, already discount-adjusted
           if (t.type === 'sale') totalSales += amount;
           else if (t.type === 'purchase') totalPurchases += amount;
           return [
@@ -125,12 +127,13 @@ function Reports() {
             (t.type || '-').toUpperCase(),
             t.product_name || '-',
             t.quantity || 0,
-            `$${(t.unit_price || 0).toFixed(2)}`,
-            `$${amount.toFixed(2)}`,
+            `${(t.unit_price || 0).toFixed(2)}`,
+            `${(t.discount || 0).toFixed(2)}`,
+            `${amount.toFixed(2)}`,
             t.order_no || '-'
           ];
         });
-        summaryText = `Transactions: ${data.length} | Items: ${totalQty} | Sales: $${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2 })} | Purchases: $${totalPurchases.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+        summaryText = `Transactions: ${data.length} | Items: ${totalQty} | Sales: ${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2 })} | Purchases: ${totalPurchases.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
       }
 
       autoTable(doc, {
@@ -302,6 +305,10 @@ function Reports() {
           <p className="text-gray-500 text-sm mt-0.5">Itemized sales with cost and profit analysis</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setShowCustomerSearch(true)} className="flex items-center justify-center space-x-2 bg-purple-50 hover:bg-purple-100 text-purple-700 px-4 py-2.5 sm:py-2 rounded-xl border border-purple-200 font-semibold text-sm transition-all">
+            <ShoppingBag size={15} />
+            <span className="hidden sm:inline">Customer Report</span>
+          </button>
           <button onClick={handlePrint} className="flex items-center justify-center space-x-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2.5 sm:py-2 rounded-xl border border-indigo-200 font-semibold text-sm transition-all">
             <Printer size={15} />
             <span className="hidden sm:inline">{selectedIds.length > 0 ? `Print (${selectedIds.length})` : 'Print All'}</span>
@@ -338,18 +345,18 @@ function Reports() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Total Sales</p>
-            <p className="text-2xl font-black text-gray-900">${Number(summary.total_sales || 0).toLocaleString()}</p>
+            <p className="text-2xl font-black text-gray-900">Rs {Number(summary.total_sales || 0).toLocaleString()}</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Total Cost</p>
-            <p className="text-2xl font-black text-gray-900">${Number(summary.total_cost || 0).toLocaleString()}</p>
+            <p className="text-2xl font-black text-gray-900">Rs {Number(summary.total_cost || 0).toLocaleString()}</p>
           </div>
           <div className={`rounded-2xl border shadow-sm p-5 ${isProfit ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
             <p className={`text-xs font-bold uppercase tracking-wide mb-1 ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
               {isProfit ? 'Net Profit' : 'Net Loss'}
             </p>
             <p className={`text-2xl font-black ${isProfit ? 'text-emerald-900' : 'text-red-900'}`}>
-              ${Number(isProfit ? summary.total_profit : summary.total_loss || 0).toLocaleString()}
+              Rs {Number(isProfit ? summary.total_profit : summary.total_loss || 0).toLocaleString()}
             </p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -430,11 +437,11 @@ function Reports() {
                       </td>
                       <td className="px-4 py-3 text-gray-500 max-w-[120px] truncate">{item.customer_name || '-'}</td>
                       <td className="px-4 py-3 text-center font-bold text-gray-700">{item.quantity}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-600">${Number(item.unit_sale_price || 0).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right font-mono font-bold text-blue-700 bg-blue-50/20">${Number(item.total_sale_price || 0).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-orange-700 bg-orange-50/20">${Number(item.total_cost_price || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-gray-600">Rs {Number(item.unit_sale_price || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono font-bold text-blue-700 bg-blue-50/20">Rs {Number(item.total_sale_price || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-orange-700 bg-orange-50/20">Rs {Number(item.total_cost_price || 0).toFixed(2)}</td>
                       <td className={`px-4 py-3 text-right font-mono font-bold bg-emerald-50/20 ${item.profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                        {item.profit >= 0 ? '+' : ''}${Number(item.profit || 0).toFixed(2)}
+                        {item.profit >= 0 ? '+' : ''}Rs {Number(item.profit || 0).toFixed(2)}
                       </td>
                     </tr>
                   );
@@ -459,6 +466,7 @@ function Reports() {
           )}
         </div>
       </div>
+      <CustomerSearchModal isOpen={showCustomerSearch} onClose={() => setShowCustomerSearch(false)} />
     </div>
   );
 }

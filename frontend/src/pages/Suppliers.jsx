@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import {
-  Plus, Search, Trash2, X, ChevronRight, Phone, Mail,
-  Building2, History, ArrowLeft, Package, DollarSign,
-  Tag, Calendar, TrendingUp, Filter
+  Plus, Search, Trash2, X, Phone, Mail,
+  Building2, History, Tag, Filter
 } from 'lucide-react';
+import BulkTransactionModal from '../components/BulkTransactionModal';
 
 // ─── Supplier Sales History Modal ───────────────────────────────────────────
 function SupplierHistoryModal({ supplier, onClose }) {
@@ -67,7 +67,7 @@ function SupplierHistoryModal({ supplier, onClose }) {
             {/* Summary Stats */}
             <div className="grid grid-cols-3 gap-2 sm:gap-4 p-4 sm:p-6 border-b border-gray-100 flex-shrink-0">
               <div className="text-center">
-                <p className="text-lg sm:text-2xl font-black text-gray-900">${Number(data.total_amount).toLocaleString()}</p>
+                <p className="text-lg sm:text-2xl font-black text-gray-900">Rs {Number(data.total_amount).toLocaleString()}</p>
                 <p className="text-xs text-gray-500 font-medium mt-0.5">Total Amount</p>
               </div>
               <div className="text-center border-x border-gray-100">
@@ -154,8 +154,8 @@ function SupplierHistoryModal({ supplier, onClose }) {
                           <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md text-xs font-medium">{item.category}</span>
                         </td>
                         <td className="px-4 py-3 text-center font-bold text-gray-700">{item.quantity}</td>
-                        <td className="px-4 py-3 text-right font-mono text-gray-600">${Number(item.unit_price).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-right font-mono font-bold text-gray-900">${Number(item.total_amount).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-mono text-gray-600">Rs {Number(item.unit_price).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-mono font-bold text-gray-900">Rs {Number(item.total_amount).toFixed(2)}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${item.payment_term === 'Cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
                             {item.payment_term || 'Cash'}
@@ -190,6 +190,7 @@ function Suppliers() {
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const itemsPerPage = 15;
 
   const fetchSuppliers = useCallback(async () => {
@@ -251,6 +252,7 @@ function Suppliers() {
           onClose={() => setSelectedSupplier(null)}
         />
       )}
+      <BulkTransactionModal isOpen={showBulkModal} onClose={() => setShowBulkModal(false)} onSuccess={fetchSuppliers} />
 
       {/* Page Header */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -259,6 +261,11 @@ function Suppliers() {
           <p className="text-gray-500 text-sm mt-0.5">{suppliers.length} total suppliers</p>
         </div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <button onClick={() => setShowBulkModal(true)}
+            className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-3 sm:py-2.5 rounded-xl font-semibold text-sm transition-all border border-emerald-200">
+            <Plus size={16} />
+            <span>Bulk Purchase</span>
+          </button>
           <button
             onClick={() => { setShowAddForm(!showAddForm); setFormError(''); }}
             className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 sm:py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-indigo-500/20"
