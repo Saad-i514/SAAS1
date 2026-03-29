@@ -5,7 +5,7 @@ import {
   BarChart2, ShoppingBag
 } from 'lucide-react';
 import api from '../services/api';
-import CustomerSearchModal from '../components/CustomerSearchModal';
+import CustomerReportModal from '../components/CustomerReportModal';
 
 const TIMEFRAMES = [
   { key: 'daily', label: 'Today' },
@@ -165,63 +165,83 @@ function Reports() {
   };
 
   const handlePrint = () => {
-    const items = reportData?.items || [];
-    const itemsToPrint = selectedIds.length > 0 ? items.filter((_, i) => selectedIds.includes(i)) : items;
-    if (itemsToPrint.length === 0) { alert('No items to print.'); return; }
+      const items = reportData?.items || [];
+      const itemsToPrint = selectedIds.length > 0 ? items.filter((_, i) => selectedIds.includes(i)) : items;
+      if (itemsToPrint.length === 0) { alert('No items to print.'); return; }
 
-    const totals = itemsToPrint.reduce((acc, item) => ({
-      qty: acc.qty + (item.quantity || 0),
-      sales: acc.sales + (item.total_sale_price || 0),
-      cost: acc.cost + (item.total_cost_price || 0),
-      profit: acc.profit + (item.profit || 0),
-    }), { qty: 0, sales: 0, cost: 0, profit: 0 });
+      // Prompt for company details
+      const companyName = prompt('Enter Company Name:', 'AL-Fursan') || 'Company Name';
+      const companyPhone = prompt('Enter Company Phone Number:', '+92 300 1234567') || '';
 
-    const rows = itemsToPrint.map(item => `
-      <tr>
-        <td>${item.date ? new Date(item.date).toLocaleDateString() : '-'}</td>
-        <td>${item.product_name || '-'}</td>
-        <td>${item.category || '-'}</td>
-        <td style="text-align:center">${item.quantity || 0}</td>
-        <td style="text-align:right">$${(item.unit_sale_price || 0).toFixed(2)}</td>
-        <td style="text-align:right">$${(item.total_sale_price || 0).toFixed(2)}</td>
-        <td style="text-align:right">$${(item.total_cost_price || 0).toFixed(2)}</td>
-        <td style="text-align:right; color:${item.profit >= 0 ? '#059669' : '#dc2626'}">$${(item.profit || 0).toFixed(2)}</td>
-      </tr>
-    `).join('');
+      const totals = itemsToPrint.reduce((acc, item) => ({
+        qty: acc.qty + (item.quantity || 0),
+        sales: acc.sales + (item.total_sale_price || 0),
+        cost: acc.cost + (item.total_cost_price || 0),
+        profit: acc.profit + (item.profit || 0),
+      }), { qty: 0, sales: 0, cost: 0, profit: 0 });
 
-    const win = window.open('', '_blank');
-    win.document.write(`
-      <html><head><title>Sales Report</title>
-      <style>
-        body { font-family: system-ui, sans-serif; color: #111; padding: 24px; font-size: 13px; }
-        h1 { font-size: 20px; margin-bottom: 4px; }
-        .meta { color: #666; font-size: 12px; margin-bottom: 20px; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 24px; }
-        th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
-        th { background: #4f46e5; color: white; font-weight: 600; }
-        tr:nth-child(even) { background: #f9fafb; }
-        .summary { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-        .summary-item strong { display: block; font-size: 11px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
-        .summary-item span { font-size: 18px; font-weight: 800; color: #111; }
-        @media print { body { padding: 0; } }
-      </style></head><body>
-      <h1>Sales Performance Report</h1>
-      <div class="meta">Generated: ${new Date().toLocaleString()} | Items: ${itemsToPrint.length} | Period: ${timeframe}</div>
-      <table>
-        <thead><tr><th>Date</th><th>Product</th><th>Category</th><th>Qty</th><th>Unit Price</th><th>Total Sale</th><th>Total Cost</th><th>Profit</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="summary">
-        <div class="summary-item"><strong>Items Sold</strong><span>${totals.qty} units</span></div>
-        <div class="summary-item"><strong>Total Sales</strong><span>$${totals.sales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-        <div class="summary-item"><strong>Total Cost</strong><span>$${totals.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-        <div class="summary-item"><strong>Net Profit</strong><span style="color:${totals.profit >= 0 ? '#059669' : '#dc2626'}">$${totals.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-      </div>
-      <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 200); }</script>
-      </body></html>
-    `);
-    win.document.close();
-  };
+      const rows = itemsToPrint.map(item => `
+        <tr>
+          <td>${item.date ? new Date(item.date).toLocaleDateString() : '-'}</td>
+          <td>${item.product_name || '-'}</td>
+          <td>${item.category || '-'}</td>
+          <td style="text-align:center">${item.quantity || 0}</td>
+          <td style="text-align:right">Rs ${(item.unit_sale_price || 0).toFixed(2)}</td>
+          <td style="text-align:right">Rs ${(item.total_sale_price || 0).toFixed(2)}</td>
+          <td style="text-align:right">Rs ${(item.total_cost_price || 0).toFixed(2)}</td>
+          <td style="text-align:right; color:${item.profit >= 0 ? '#059669' : '#dc2626'}">Rs ${(item.profit || 0).toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      const win = window.open('', '_blank');
+      win.document.write(`
+        <html><head><title>Sales Report - ${companyName}</title>
+        <style>
+          body { font-family: system-ui, sans-serif; color: #111; padding: 24px; font-size: 13px; }
+          .header { text-align: center; border-bottom: 3px solid #4f46e5; padding-bottom: 16px; margin-bottom: 24px; }
+          .header h1 { font-size: 24px; margin: 0 0 4px 0; color: #4f46e5; }
+          .header .phone { font-size: 14px; color: #666; font-weight: 600; }
+          h2 { font-size: 18px; margin: 20px 0 8px 0; color: #111; }
+          .meta { color: #666; font-size: 12px; margin-bottom: 20px; background: #f9fafb; padding: 12px; border-radius: 8px; }
+          table { border-collapse: collapse; width: 100%; margin-bottom: 24px; }
+          th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+          th { background: #4f46e5; color: white; font-weight: 600; font-size: 12px; }
+          tr:nth-child(even) { background: #f9fafb; }
+          .summary { background: #f3f4f6; border: 2px solid #4f46e5; border-radius: 8px; padding: 16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+          .summary-item strong { display: block; font-size: 11px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
+          .summary-item span { font-size: 18px; font-weight: 800; color: #111; }
+          .footer { text-align: center; margin-top: 32px; padding-top: 16px; border-top: 2px solid #e5e7eb; color: #999; font-size: 11px; }
+          @media print { body { padding: 16px; } }
+        </style></head><body>
+        <div class="header">
+          <h1>${companyName}</h1>
+          ${companyPhone ? `<div class="phone">📞 ${companyPhone}</div>` : ''}
+        </div>
+        <h2>Sales Performance Report</h2>
+        <div class="meta">
+          <strong>Generated:</strong> ${new Date().toLocaleString()} | 
+          <strong>Items:</strong> ${itemsToPrint.length} | 
+          <strong>Period:</strong> ${timeframe}
+        </div>
+        <table>
+          <thead><tr><th>Date</th><th>Product</th><th>Category</th><th>Qty</th><th>Unit Price</th><th>Total Sale</th><th>Total Cost</th><th>Profit</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="summary">
+          <div class="summary-item"><strong>Items Sold</strong><span>${totals.qty} units</span></div>
+          <div class="summary-item"><strong>Total Sales</strong><span>Rs ${totals.sales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+          <div class="summary-item"><strong>Total Cost</strong><span>Rs ${totals.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+          <div class="summary-item"><strong>Net Profit</strong><span style="color:${totals.profit >= 0 ? '#059669' : '#dc2626'}">Rs ${totals.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+        </div>
+        <div class="footer">
+          <p>This is a computer-generated report from ${companyName}</p>
+          <p>Printed on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+        </div>
+        <script>window.onload = () => { setTimeout(() => { window.print(); }, 500); }</script>
+        </body></html>
+      `);
+      win.document.close();
+    }
 
   const exportCards = [
     { title: 'Products & Stock', desc: 'Inventory, pricing, and stock levels', type: 'products', icon: Package, color: 'blue' },
@@ -466,7 +486,7 @@ function Reports() {
           )}
         </div>
       </div>
-      <CustomerSearchModal isOpen={showCustomerSearch} onClose={() => setShowCustomerSearch(false)} />
+      <CustomerReportModal isOpen={showCustomerSearch} onClose={() => setShowCustomerSearch(false)} />
     </div>
   );
 }
