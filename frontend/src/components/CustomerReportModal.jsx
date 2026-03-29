@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Search, Printer, Download, Package } from 'lucide-react';
+import { X, Search, Printer, Package } from 'lucide-react';
 import api from '../services/api';
 
 function CustomerReportModal({ isOpen, onClose }) {
@@ -495,8 +495,9 @@ function CustomerReportModal({ isOpen, onClose }) {
                     <tr className="text-xs font-bold text-gray-500 uppercase">
                       <th className="px-4 py-3 text-left">Date</th>
                       {reportType === 'business' && <th className="px-4 py-3 text-left">Customer</th>}
-                      <th className="px-4 py-3 text-left">{reportType === 'customer' ? 'Type' : 'Product'}</th>
-                      <th className="px-4 py-3 text-left">{reportType === 'customer' ? 'Product' : 'Category'}</th>
+                      <th className="px-4 py-3 text-left">Type</th>
+                      <th className="px-4 py-3 text-left">Product</th>
+                      {reportType === 'business' && <th className="px-4 py-3 text-left">Category</th>}
                       <th className="px-4 py-3 text-center">Qty</th>
                       <th className="px-4 py-3 text-right">Unit Price</th>
                       <th className="px-4 py-3 text-right">{reportType === 'customer' ? 'Discount' : 'Sale'}</th>
@@ -507,6 +508,9 @@ function CustomerReportModal({ isOpen, onClose }) {
                     {reportData.items.map((item, i) => (
                       <tr key={i} className="hover:bg-gray-50">
                         <td className="px-4 py-3 text-gray-600">{item.date ? new Date(item.date).toLocaleDateString() : '-'}</td>
+                        {reportType === 'business' && (
+                          <td className="px-4 py-3 text-gray-600">{item.customer_name || '-'}</td>
+                        )}
                         <td className="px-4 py-3">
                           <span className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
                             item.type === 'sale' ? 'bg-emerald-100 text-emerald-700' :
@@ -517,10 +521,22 @@ function CustomerReportModal({ isOpen, onClose }) {
                           </span>
                         </td>
                         <td className="px-4 py-3 font-semibold text-gray-900">{item.product_name || '-'}</td>
+                        {reportType === 'business' && (
+                          <td className="px-4 py-3 text-gray-600">{item.category || '-'}</td>
+                        )}
                         <td className="px-4 py-3 text-center font-bold text-gray-700">{item.quantity || 0}</td>
-                        <td className="px-4 py-3 text-right font-mono text-gray-600">Rs {(item.unit_price || 0).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-right font-mono text-orange-600">Rs {(item.discount || 0).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-right font-mono font-bold text-indigo-600">Rs {(item.total_amount || 0).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-mono text-gray-600">Rs {((reportType === 'customer' ? item.unit_price : item.unit_sale_price) || 0).toFixed(2)}</td>
+                        {reportType === 'customer' ? (
+                          <>
+                            <td className="px-4 py-3 text-right font-mono text-orange-600">Rs {(item.discount || 0).toFixed(2)}</td>
+                            <td className="px-4 py-3 text-right font-mono font-bold text-indigo-600">Rs {(item.total_amount || 0).toFixed(2)}</td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600">Rs {(item.total_sale_price || 0).toFixed(2)}</td>
+                            <td className="px-4 py-3 text-right font-mono font-bold text-indigo-600">Rs {(item.profit || 0).toFixed(2)}</td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
