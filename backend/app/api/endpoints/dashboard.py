@@ -81,29 +81,38 @@ def get_dashboard_summary(
 
         start = _start_date(timeframe)
 
-        # ── product / supplier counts ────────────────────────────────────────
-        product_count = db.query(func.count(models.Product.id)).filter(
-            models.Product.company_id == company_id
-        ).scalar() or 0
-
-        supplier_count = db.query(func.count(models.Supplier.id)).filter(
-            models.Supplier.company_id == company_id
-        ).scalar() or 0
-
-        # ── sales: use stored debit (already net of discount) ────────────────
-        sales_agg = db.query(
-            func.coalesce(func.sum(models.Transaction.debit), 0).label("net_sale"),
-            func.coalesce(func.sum(models.Transaction.quantity), 0).label("total_qty"),
-        ).filter(
-            models.Transaction.company_id == company_id,
-            models.Transaction.type == models.TransactionTypeEnum.SALE,
-            models.Transaction.date >= start,
+        # ── Query 1: Combined Counts (One Trip) ─────────────────────────────
+        counts = db.query(
+            db.query(func.count(models.Product.id)).filter(models.Product.company_id == company_id).label("products"),
+            db.query(func.count(models.Supplier.id)).filter(models.Supplier.company_id == company_id).label("suppliers"),
+            db.query(func.count(models.Product.id)).filter(
+                models.Product.company_id == company_id,
+                models.Product.in_hand_qty <= 5,
+                models.Product.status == "Active"
+            ).label("low_stock")
         ).first()
 
-        total_sale_net = float(sales_agg.net_sale or 0)
-        total_sales_items = int(sales_agg.total_qty or 0)
+        # ── Query 2: Combined Transaction Aggregates (One Trip) ─────────────
+        tx_stats = db.query(
+            models.Transaction.type,
+            func.sum(models.Transaction.debit).label("total_debit"),
+            func.sum(models.Transaction.quantity).label("total_qty")
+        ).filter(
+            models.Transaction.company_id == company_id,
+            models.Transaction.date >= start
+        ).group_by(models.Transaction.type).all()
 
-        # ── cost of goods sold via JOIN on product name ──────────────────────
+        stats_map = {row.type: row for row in tx_stats}
+        
+        # Helper to get stats safely
+        def get_stat(t_type):
+            return stats_map.get(t_type) or type('obj', (object,), {'total_debit': 0, 'total_qty': 0})
+
+        sale_stats = get_stat(models.TransactionTypeEnum.SALE)
+        return_stats = get_stat(models.TransactionTypeEnum.REVERSE)
+        purchase_stats = get_stat(models.TransactionTypeEnum.PURCHASE)
+
+        # ── Query 3: Cost calculation (Needs JOIN, stays dedicated) ─────────
         cost_agg = db.query(
             func.coalesce(
                 func.sum(models.Product.product_price * models.Transaction.quantity), 0
@@ -120,39 +129,20 @@ def get_dashboard_summary(
             models.Transaction.date >= start,
         ).first()
 
+        total_sale_net = float(sale_stats.total_debit or 0)
+        total_sales_items = int(sale_stats.total_qty or 0)
         total_cost = float(cost_agg.total_cost or 0)
+        total_return = float(return_stats.total_debit or 0)
+        total_return_items = int(return_stats.total_qty or 0)
+        total_purchase = float(purchase_stats.total_debit or 0)
+
         net = total_sale_net - total_cost
         profit = round(net, 2) if net > 0 else 0
         loss = round(abs(net), 2) if net < 0 else 0
 
-        # ── returns (REVERSE type) ───────────────────────────────────────────
-        returns_agg = db.query(
-            func.coalesce(func.sum(models.Transaction.debit), 0).label("total_return"),
-            func.coalesce(func.sum(models.Transaction.quantity), 0).label("total_qty"),
-        ).filter(
-            models.Transaction.company_id == company_id,
-            models.Transaction.type == models.TransactionTypeEnum.REVERSE,
-            models.Transaction.date >= start,
-        ).first()
-
-        total_return = float(returns_agg.total_return or 0)
-        total_return_items = int(returns_agg.total_qty or 0)
-
-        # ── low stock (≤ 5 units, active products) ───────────────────────────
-        low_stock_count = db.query(func.count(models.Product.id)).filter(
-            models.Product.company_id == company_id,
-            models.Product.in_hand_qty <= 5,
-            models.Product.status == "Active",
-        ).scalar() or 0
-
-        # ── total purchases in period ────────────────────────────────────────
-        total_purchase = _sum_debit(
-            db, company_id, models.TransactionTypeEnum.PURCHASE, start
-        )
-
         return {
-            "product_count": product_count,
-            "supplier_count": supplier_count,
+            "product_count": counts.products,
+            "supplier_count": counts.suppliers,
             "sales_amount": round(total_sale_net, 2),
             "cost_price": round(total_cost, 2),
             "profit": profit,
@@ -160,7 +150,7 @@ def get_dashboard_summary(
             "sales_items": total_sales_items,
             "returns_amount": round(total_return, 2),
             "returns_items": total_return_items,
-            "low_stock_count": low_stock_count,
+            "low_stock_count": counts.low_stock,
             "total_purchase": round(total_purchase, 2),
             "timeframe": timeframe,
         }
