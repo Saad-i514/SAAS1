@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { X, Search, Printer, Package } from 'lucide-react';
 import api from '../services/api';
 
-function CustomerReportModal({ isOpen, onClose }) {
+function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
   const [customerName, setCustomerName] = useState('');
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reportType, setReportType] = useState('customer'); // 'customer' or 'business'
+  const [timeframe, setTimeframe] = useState(currentTimeframe);
 
   const searchCustomer = async () => {
     if (reportType === 'customer' && !customerName.trim()) {
@@ -18,9 +19,11 @@ function CustomerReportModal({ isOpen, onClose }) {
     
     setLoading(true);
     try {
+      // Use timeframe if no custom dates are picked
+      const activeTimeframe = (startDate || endDate) ? 'all' : timeframe;
       let url = reportType === 'customer' 
-        ? `/reports/customer-search?customer_name=${encodeURIComponent(customerName)}`
-        : `/reports/sales-summary?timeframe=all`;
+        ? `/reports/customer-search?customer_name=${encodeURIComponent(customerName)}&timeframe=${activeTimeframe}`
+        : `/reports/sales-summary?timeframe=${activeTimeframe}`;
       
       const { data } = await api.get(url);
       
@@ -367,26 +370,63 @@ function CustomerReportModal({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* Date Range Filters */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Start Date</label>
               <input
                 type="date"
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all"
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all font-medium"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                    setStartDate(e.target.value);
+                    if(e.target.value) setTimeframe('all');
+                }}
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">End Date</label>
               <input
                 type="date"
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all"
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all font-medium"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                    setEndDate(e.target.value);
+                    if(e.target.value) setTimeframe('all');
+                }}
               />
             </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+           {['daily', 'weekly', 'monthly', 'all'].map(tf => (
+               <button
+                 key={tf}
+                 onClick={() => {
+                     setTimeframe(tf);
+                     setStartDate('');
+                     setEndDate('');
+                 }}
+                 className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                     timeframe === tf && !startDate && !endDate
+                     ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                     : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                 }`}
+               >
+                 {tf === 'daily' ? 'Today' : tf === 'weekly' ? 'This Week' : tf === 'monthly' ? 'This Month' : 'All History'}
+               </button>
+           ))}
+           {(startDate || endDate || timeframe !== currentTimeframe) && (
+             <button 
+                onClick={() => {
+                    setStartDate('');
+                    setEndDate('');
+                    setTimeframe(currentTimeframe);
+                }}
+                className="text-xs font-bold text-red-600 hover:underline px-2"
+             >
+                Reset Filters
+             </button>
+           )}
           </div>
 
           {/* Search Button */}

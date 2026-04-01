@@ -486,7 +486,11 @@ function Reports() {
           )}
         </div>
       </div>
-      <CustomerReportModal isOpen={showCustomerSearch} onClose={() => setShowCustomerSearch(false)} />
+      <CustomerReportModal 
+        isOpen={showCustomerSearch} 
+        onClose={() => setShowCustomerSearch(false)} 
+        currentTimeframe={timeframe}
+      />
     </div>
   );
 }

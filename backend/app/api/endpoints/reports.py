@@ -14,20 +14,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def get_date_range(timeframe: str):
-    now = datetime.utcnow()
-    if timeframe == "daily":
-        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    elif timeframe == "weekly":
-        start_date = now - timedelta(days=7)
-    elif timeframe == "monthly":
-        start_date = now - timedelta(days=30)
-    elif timeframe == "yearly":
-        start_date = now - timedelta(days=365)
-    else:
-        # "all" or any unknown value → no date filter
-        start_date = datetime.min
-    return start_date
+from app.utils import get_date_range
 
 
 @router.get("/sales-summary")
@@ -122,6 +109,7 @@ def get_sales_report(
 @router.get("/supplier-sales/{supplier_id}")
 def get_supplier_sales_report(
     supplier_id: int,
+    timeframe: str = Query("all", description="daily, weekly, monthly, yearly, all"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -134,6 +122,8 @@ def get_supplier_sales_report(
     ).first()
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
+
+    start_date = get_date_range(timeframe)
 
     transactions = db.query(
         models.Transaction.date,
@@ -153,7 +143,8 @@ def get_supplier_sales_report(
         )
     ).filter(
         models.Transaction.company_id == company_id,
-        models.Transaction.supplier_id == supplier_id
+        models.Transaction.supplier_id == supplier_id,
+        models.Transaction.date >= start_date
     ).order_by(models.Transaction.date.desc()).all()
 
     items = []
@@ -209,6 +200,7 @@ def get_supplier_sales_report(
 @router.get("/customer-search")
 def search_customer_report(
     customer_name: str = Query(..., description="Customer / shop name (partial match)"),
+    timeframe: str = Query("all", description="daily, weekly, monthly, yearly, all"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -220,6 +212,8 @@ def search_customer_report(
             return {"customer_name": customer_name, "items": [], "product_summary": [],
                     "total_amount": 0, "total_qty": 0, "total_transactions": 0}
         company_id = first.id
+
+    start_date = get_date_range(timeframe)
 
     transactions = db.query(
         models.Transaction.id,
@@ -242,6 +236,7 @@ def search_customer_report(
     ).filter(
         models.Transaction.company_id == company_id,
         models.Transaction.customer_name.ilike(f"%{customer_name}%"),
+        models.Transaction.date >= start_date
     ).order_by(models.Transaction.date.desc()).all()
 
     items = []

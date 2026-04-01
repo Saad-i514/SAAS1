@@ -10,6 +10,7 @@ from app import models, schemas
 from app.api import deps
 import logging
 from datetime import datetime
+from app.utils import get_date_range
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -143,6 +144,7 @@ def read_transactions(
     transaction_type: Optional[str] = Query(None),
     customer_name: Optional[str] = Query(None, description="Filter by customer/shop name (partial match)"),
     order_no: Optional[str] = Query(None, description="Filter by order number"),
+    timeframe: str = Query("all", description="daily, weekly, monthly, yearly, all"),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     company_id = current_user.company_id
@@ -156,6 +158,11 @@ def read_transactions(
     query = db.query(models.Transaction).filter(
         models.Transaction.company_id == company_id
     )
+    
+    start_date = get_date_range(timeframe)
+    if start_date != datetime.min:
+        query = query.filter(models.Transaction.date >= start_date)
+
     if supplier_id:
         query = query.filter(models.Transaction.supplier_id == supplier_id)
     if transaction_type:
