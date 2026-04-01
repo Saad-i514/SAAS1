@@ -184,9 +184,43 @@ def get_dashboard_charts(
             }
 
         now = datetime.utcnow()
-        monthly_sales = []
+        # Ensure we start exactly from the beginning of the month, 11 months ago
+        # (meaning 12 months total including the current month)
+        start_month = now.month - 11
+        start_year = now.year
+        while start_month <= 0:
+            start_month += 12
+            start_year -= 1
 
-        # Build 12-month rolling window — NO nested functions (avoids closure bug)
+        m_start_threshold = datetime(start_year, start_month, 1)
+
+        # Execute ONE aggregated query grouped by year, month, and transaction type
+        grouped_data = db.query(
+            func.extract('year', models.Transaction.date).label('year'),
+            func.extract('month', models.Transaction.date).label('month'),
+            models.Transaction.type,
+            func.sum(models.Transaction.debit).label('total')
+        ).filter(
+            models.Transaction.company_id == company_id,
+            models.Transaction.type.in_([models.TransactionTypeEnum.SALE, models.TransactionTypeEnum.PURCHASE]),
+            models.Transaction.date >= m_start_threshold
+        ).group_by(
+            func.extract('year', models.Transaction.date),
+            func.extract('month', models.Transaction.date),
+            models.Transaction.type
+        ).all()
+
+        # Place the DB results into a quick lookup dictionary: {(year, month, 'sale'): total}
+        data_map = {}
+        for row in grouped_data:
+            # SQLAlchemy extract returns float/Decimal sometimes depending on dialect
+            yy = int(row.year)
+            mm = int(row.month)
+            t_type = row.type.value if hasattr(row.type, 'value') else row.type
+            data_map[(yy, mm, t_type)] = float(row.total or 0)
+
+        # Build the exact 12-month sequence expected by the frontend
+        monthly_sales = []
         for i in range(11, -1, -1):
             target_month = now.month - i
             target_year = now.year
@@ -194,34 +228,13 @@ def get_dashboard_charts(
                 target_month += 12
                 target_year -= 1
 
-            m_start = datetime(target_year, target_month, 1)
-            m_end = (
-                datetime(target_year + 1, 1, 1)
-                if target_month == 12
-                else datetime(target_year, target_month + 1, 1)
-            )
-            label = f"{m_start.strftime('%b')} '{target_year % 100:02d}"
+            # Get name strictly via standard datetime formatting
+            month_date = datetime(target_year, target_month, 1)
+            label = f"{month_date.strftime('%b')} '{target_year % 100:02d}"
 
-            # Inline queries — no closure, dates are local variables
-            sales_val = float(
-                db.query(func.coalesce(func.sum(models.Transaction.debit), 0))
-                .filter(
-                    models.Transaction.company_id == company_id,
-                    models.Transaction.type == models.TransactionTypeEnum.SALE,
-                    models.Transaction.date >= m_start,
-                    models.Transaction.date < m_end,
-                ).scalar() or 0
-            )
-            purchase_val = float(
-                db.query(func.coalesce(func.sum(models.Transaction.debit), 0))
-                .filter(
-                    models.Transaction.company_id == company_id,
-                    models.Transaction.type == models.TransactionTypeEnum.PURCHASE,
-                    models.Transaction.date >= m_start,
-                    models.Transaction.date < m_end,
-                ).scalar() or 0
-            )
-
+            sales_val = data_map.get((target_year, target_month, models.TransactionTypeEnum.SALE.value), 0.0)
+            purchase_val = data_map.get((target_year, target_month, models.TransactionTypeEnum.PURCHASE.value), 0.0)
+            
             monthly_sales.append({
                 "name": label,
                 "sales": round(sales_val, 2),
