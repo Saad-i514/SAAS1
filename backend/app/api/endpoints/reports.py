@@ -46,7 +46,19 @@ def get_sales_report(
         company_id = first.id
     start_date = get_date_range(timeframe)
 
-    sales_query = db.query(models.Transaction, models.Product).outerjoin(
+    sales_query = db.query(
+        models.Transaction.date,
+        models.Transaction.transaction_id,
+        models.Transaction.order_no,
+        models.Transaction.product_name,
+        models.Transaction.quantity,
+        models.Transaction.unit_price,
+        models.Transaction.discount,
+        models.Transaction.customer_name,
+        models.Transaction.payment_term,
+        models.Product.category,
+        models.Product.product_price
+    ).outerjoin(
         models.Product,
         and_(
             models.Product.name == models.Transaction.product_name,
@@ -63,27 +75,27 @@ def get_sales_report(
     total_cost = 0.0
     total_qty = 0
 
-    for tx, product in sales_query:
-        qty = tx.quantity or 0
-        discount = tx.discount or 0
+    for row in sales_query:
+        qty = row.quantity or 0
+        discount = row.discount or 0
         # Net sale = (unit_price × qty) − discount
-        sale_p = round(max(0.0, (tx.unit_price or 0) * qty - discount), 2)
-        cost_p = round((product.product_price if product else 0) * qty, 2)
+        sale_p = round(max(0.0, (row.unit_price or 0) * qty - discount), 2)
+        cost_p = round((row.product_price or 0) * qty, 2)
         profit = round(sale_p - cost_p, 2)
 
         items.append({
-            "date": tx.date.isoformat() if tx.date else None,
-            "transaction_id": tx.transaction_id,
-            "order_no": tx.order_no,
-            "product_name": tx.product_name,
-            "category": product.category if product else "N/A",
+            "date": row.date.isoformat() if row.date else None,
+            "transaction_id": row.transaction_id,
+            "order_no": row.order_no,
+            "product_name": row.product_name,
+            "category": row.category or "N/A",
             "quantity": qty,
-            "unit_sale_price": tx.unit_price or 0,
+            "unit_sale_price": row.unit_price or 0,
             "total_sale_price": sale_p,
             "total_cost_price": cost_p,
             "profit": profit,
-            "customer_name": tx.customer_name,
-            "payment_term": tx.payment_term,
+            "customer_name": row.customer_name,
+            "payment_term": row.payment_term,
             "discount": discount,
         })
 
@@ -123,7 +135,17 @@ def get_supplier_sales_report(
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
 
-    transactions = db.query(models.Transaction, models.Product).outerjoin(
+    transactions = db.query(
+        models.Transaction.date,
+        models.Transaction.type,
+        models.Transaction.order_no,
+        models.Transaction.product_name,
+        models.Transaction.quantity,
+        models.Transaction.unit_price,
+        models.Transaction.discount,
+        models.Transaction.payment_term,
+        models.Product.category
+    ).outerjoin(
         models.Product,
         and_(
             models.Product.name == models.Transaction.product_name,
@@ -139,22 +161,22 @@ def get_supplier_sales_report(
     total_amount = 0.0
     total_qty = 0
 
-    for tx, product in transactions:
-        qty = tx.quantity or 0
-        discount = tx.discount or 0
-        amount = round(max(0.0, (tx.unit_price or 0) * qty - discount), 2)
-        category = (product.category if product else None) or "Uncategorized"
+    for row in transactions:
+        qty = row.quantity or 0
+        discount = row.discount or 0
+        amount = round(max(0.0, (row.unit_price or 0) * qty - discount), 2)
+        category = row.category or "Uncategorized"
 
         items.append({
-            "date": tx.date.isoformat() if tx.date else None,
-            "type": tx.type.value if tx.type else None,
-            "order_no": tx.order_no,
-            "product_name": tx.product_name,
+            "date": row.date.isoformat() if row.date else None,
+            "type": row.type.value if row.type else None,
+            "order_no": row.order_no,
+            "product_name": row.product_name,
             "category": category,
             "quantity": qty,
-            "unit_price": tx.unit_price or 0,
+            "unit_price": row.unit_price or 0,
             "total_amount": amount,
-            "payment_term": tx.payment_term,
+            "payment_term": row.payment_term,
             "discount": discount,
         })
 
@@ -199,7 +221,19 @@ def search_customer_report(
                     "total_amount": 0, "total_qty": 0, "total_transactions": 0}
         company_id = first.id
 
-    transactions = db.query(models.Transaction, models.Product).outerjoin(
+    transactions = db.query(
+        models.Transaction.id,
+        models.Transaction.date,
+        models.Transaction.type,
+        models.Transaction.order_no,
+        models.Transaction.product_name,
+        models.Transaction.quantity,
+        models.Transaction.unit_price,
+        models.Transaction.discount,
+        models.Transaction.debit,
+        models.Transaction.payment_term,
+        models.Product.category
+    ).outerjoin(
         models.Product,
         and_(
             models.Product.name == models.Transaction.product_name,
@@ -215,29 +249,29 @@ def search_customer_report(
     total_amount = 0.0
     total_qty = 0
 
-    for tx, product in transactions:
-        qty = tx.quantity or 0
+    for row in transactions:
+        qty = row.quantity or 0
         # Use stored debit — already calculated server-side
-        amount = round(tx.debit or 0, 2)
-        category = (product.category if product else None) or "Uncategorized"
+        amount = round(row.debit or 0, 2)
+        category = row.category or "Uncategorized"
         total_amount += amount
         total_qty += qty
 
         items.append({
-            "id": tx.id,
-            "date": tx.date.isoformat() if tx.date else None,
-            "type": tx.type.value if tx.type else None,
-            "order_no": tx.order_no,
-            "product_name": tx.product_name,
+            "id": row.id,
+            "date": row.date.isoformat() if row.date else None,
+            "type": row.type.value if row.type else None,
+            "order_no": row.order_no,
+            "product_name": row.product_name,
             "category": category,
             "quantity": qty,
-            "unit_price": tx.unit_price or 0,
-            "discount": tx.discount or 0,
+            "unit_price": row.unit_price or 0,
+            "discount": row.discount or 0,
             "total_amount": amount,
-            "payment_term": tx.payment_term,
+            "payment_term": row.payment_term,
         })
 
-        pname = tx.product_name or "Unknown"
+        pname = row.product_name or "Unknown"
         if pname not in product_summary:
             product_summary[pname] = {"qty": 0, "amount": 0.0, "transactions": 0, "category": category}
         product_summary[pname]["qty"] += qty
@@ -274,14 +308,14 @@ def download_report_csv(
 
     if report_type == "products":
         writer.writerow(["Article No", "Name", "Category", "Purchase Price", "Sale Price", "In Hand Qty", "Status"])
-        products = db.query(models.Product).filter(models.Product.company_id == company_id).all()
+        products = db.query(models.Product).filter(models.Product.company_id == company_id).yield_per(1000)
         for p in products:
             writer.writerow([p.article_no, p.name, p.category or "Uncategorized",
                              p.product_price, p.sale_price, p.in_hand_qty, p.status])
 
     elif report_type == "suppliers":
         writer.writerow(["Supplier No", "Name", "Email", "Phone", "Status"])
-        suppliers = db.query(models.Supplier).filter(models.Supplier.company_id == company_id).all()
+        suppliers = db.query(models.Supplier).filter(models.Supplier.company_id == company_id).yield_per(1000)
         for s in suppliers:
             writer.writerow([s.supplier_no, s.name, s.email or "", s.phone or "", s.status])
 
@@ -290,7 +324,7 @@ def download_report_csv(
                          "Unit Price", "Discount", "Net Amount", "Customer/Supplier", "Payment Term"])
         transactions = db.query(models.Transaction).filter(
             models.Transaction.company_id == company_id
-        ).order_by(models.Transaction.date.desc()).all()
+        ).order_by(models.Transaction.date.desc()).yield_per(1000)
         for t in transactions:
             writer.writerow([
                 t.date.strftime("%Y-%m-%d %H:%M:%S") if t.date else "",

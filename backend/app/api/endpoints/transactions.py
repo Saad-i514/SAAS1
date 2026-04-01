@@ -372,19 +372,28 @@ def create_bulk_order(
     created_transactions: list[models.Transaction] = []
     total_amount = 0.0
 
+    # Prepare a list of product names and ensure they are not blank
+    product_names = []
+    for item in order_in.items:
+        if not item.product_name or not item.product_name.strip():
+            raise HTTPException(status_code=400, detail="Product name cannot be blank")
+        product_names.append(item.product_name)
+
+    # Fetch all referenced products in one query
+    products = db.query(models.Product).filter(
+        models.Product.company_id == company_id,
+        models.Product.name.in_(product_names)
+    ).all()
+    product_map = {p.name: p for p in products}
+
     # Pre-validate all stock before touching anything
     if tx_type == models.TransactionTypeEnum.SALE:
         for item in order_in.items:
-            if not item.product_name or not item.product_name.strip():
-                raise HTTPException(status_code=400, detail="Product name cannot be blank")
-            product = db.query(models.Product).filter(
-                models.Product.name == item.product_name,
-                models.Product.company_id == company_id,
-            ).first()
+            product = product_map.get(item.product_name)
             if not product:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Product '{item.product_name}' not found",
+                    detail=f"Product '{item.product_name}' not found"
                 )
             if product.in_hand_qty < item.quantity:
                 raise HTTPException(
@@ -395,12 +404,7 @@ def create_bulk_order(
     # For purchase, validate products exist (they must be in the system to track inventory)
     if tx_type == models.TransactionTypeEnum.PURCHASE:
         for item in order_in.items:
-            if not item.product_name or not item.product_name.strip():
-                raise HTTPException(status_code=400, detail="Product name cannot be blank")
-            product = db.query(models.Product).filter(
-                models.Product.name == item.product_name,
-                models.Product.company_id == company_id,
-            ).first()
+            product = product_map.get(item.product_name)
             if not product:
                 raise HTTPException(
                     status_code=404,
@@ -428,14 +432,11 @@ def create_bulk_order(
             )
             db.add(tx)
 
-            # Update inventory — fetch once per item
-            product = db.query(models.Product).filter(
-                models.Product.name == item.product_name,
-                models.Product.company_id == company_id,
-            ).first()
+            # Update inventory using the pre-fetched objects
+            product = product_map.get(item.product_name)
             if product:
                 _apply_inventory(db, product, tx_type, item.quantity, order_in.add_to_stock or False)
-                db.add(product)
+
 
             created_transactions.append(tx)
 
