@@ -58,7 +58,7 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your settings (see Configuration section)
+# Edit .env with your settings
 
 # Run migrations
 alembic upgrade head
@@ -67,7 +67,7 @@ alembic upgrade head
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Backend will be available at: http://localhost:8000
+Backend will be available at: http://localhost:8000  
 API docs at: http://localhost:8000/api/v1/docs
 
 ### 3. Frontend Setup
@@ -95,7 +95,7 @@ Frontend will be available at: http://localhost:5173
 # Database (Required)
 DATABASE_URL="postgresql://user:password@host:port/database"
 
-# Security (Required) - Generate with: python -c 'import secrets; print(secrets.token_urlsafe(32))'
+# Security (Required)
 SECRET_KEY="your-secret-key-here"
 
 # CORS (Required)
@@ -122,8 +122,6 @@ VITE_API_URL=http://localhost:8000/api/v1
 - ✅ CORS configuration
 - ✅ Password hashing with bcrypt
 
-See [SECURITY.md](SECURITY.md) for detailed security guidelines.
-
 ## 📦 Database Schema
 
 ### Core Tables
@@ -134,26 +132,7 @@ See [SECURITY.md](SECURITY.md) for detailed security guidelines.
 - **transactions** - All business transactions
 - **dynamic_columns** - Extensible metadata
 
-### Indexes
-Performance-optimized indexes on:
-- company_id (all tables)
-- status, type, date (transactions)
-- product_name, customer_name (transactions)
-- Composite indexes for common queries
-
 ## 🚀 Production Deployment
-
-### Pre-Deployment Checklist
-
-1. ✅ Generate SECRET_KEY
-2. ✅ Update DATABASE_URL with production credentials
-3. ✅ Configure CORS for production domain
-4. ✅ Run database migrations
-5. ✅ Remove test/seed files
-6. ✅ Enable HTTPS
-7. ✅ Set up monitoring
-
-See [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) for complete checklist.
 
 ### Deployment Commands
 
@@ -213,35 +192,7 @@ Interactive API documentation available at:
 - `GET /api/v1/dashboard/charts` - Chart data
 - `GET /api/v1/dashboard/recent-transactions` - Recent activity
 
-## 🧪 Testing
-
-```bash
-# Backend tests (when implemented)
-cd backend
-pytest
-
-# Frontend tests (when implemented)
-cd frontend
-npm test
-```
-
-## 📈 Performance
-
-- API response time: < 200ms (p95)
-- Dashboard load: < 2s
-- Database queries: < 50ms (p95)
-- Real-time updates: < 1s latency
-
-## 🔄 Real-time Updates
-
-The application uses Server-Sent Events (SSE) for real-time updates:
-- Automatic reconnection with exponential backoff
-- Live transaction notifications
-- Dashboard auto-refresh on new data
-
-## 🛠️ Development
-
-### Project Structure
+## 🛠️ Project Structure
 
 ```
 SAAS1/
@@ -261,65 +212,23 @@ SAAS1/
 │   │   ├── services/     # API clients
 │   │   └── main.jsx      # Entry point
 │   └── package.json
-├── PRODUCTION_CHECKLIST.md
-├── SECURITY.md
 └── README.md
-```
-
-### Adding New Features
-
-1. **Backend**: Create endpoint in `app/api/endpoints/`
-2. **Schema**: Define Pydantic models in `app/schemas/`
-3. **Frontend**: Add page/component in `src/pages/` or `src/components/`
-4. **API Client**: Update `src/services/api.js`
-
-### Database Migrations
-
-```bash
-cd backend
-
-# Create migration
-alembic revision --autogenerate -m "description"
-
-# Apply migration
-alembic upgrade head
-
-# Rollback
-alembic downgrade -1
 ```
 
 ## 📝 License
 
 [Your License Here]
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-## 📞 Support
-
-For issues and questions:
-- Check [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)
-- Review [SECURITY.md](SECURITY.md)
-- Open an issue on GitHub
-
 ## 🎯 Roadmap
 
 - [ ] Refresh token mechanism
 - [ ] Email verification
 - [ ] Password reset flow
-- [ ] PDF export functionality
 - [ ] Bulk import from CSV/Excel
-- [ ] Advanced reporting
 - [ ] Mobile app
 - [ ] Multi-language support
 
 ---
 
 **Status**: Production Ready ✅  
-**Version**: 1.0.0  
-**Last Updated**: March 27, 2026
+**Version**: 1.0.0

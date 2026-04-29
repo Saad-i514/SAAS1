@@ -20,6 +20,7 @@ from app.utils import get_date_range
 @router.get("/sales-summary")
 def get_sales_report(
     timeframe: str = Query("daily", description="daily, weekly, monthly, yearly, all"),
+    tz_offset: int = Query(5, description="Client UTC offset in hours (e.g. 5 for PKT)"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -31,7 +32,7 @@ def get_sales_report(
                     "summary": {"total_sales": 0, "total_cost": 0,
                                 "total_profit": 0, "total_loss": 0, "total_quantity": 0}}
         company_id = first.id
-    start_date = get_date_range(timeframe)
+    start_date = get_date_range(timeframe, tz_offset)
 
     sales_query = db.query(
         models.Transaction.date,
@@ -110,6 +111,7 @@ def get_sales_report(
 def get_supplier_sales_report(
     supplier_id: int,
     timeframe: str = Query("all", description="daily, weekly, monthly, yearly, all"),
+    tz_offset: int = Query(5, description="Client UTC offset in hours"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -123,7 +125,7 @@ def get_supplier_sales_report(
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
 
-    start_date = get_date_range(timeframe)
+    start_date = get_date_range(timeframe, tz_offset)
 
     transactions = db.query(
         models.Transaction.date,
@@ -201,6 +203,7 @@ def get_supplier_sales_report(
 def search_customer_report(
     customer_name: str = Query(..., description="Customer / shop name (partial match)"),
     timeframe: str = Query("all", description="daily, weekly, monthly, yearly, all"),
+    tz_offset: int = Query(5, description="Client UTC offset in hours"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -213,7 +216,7 @@ def search_customer_report(
                     "total_amount": 0, "total_qty": 0, "total_transactions": 0}
         company_id = first.id
 
-    start_date = get_date_range(timeframe)
+    start_date = get_date_range(timeframe, tz_offset)
 
     transactions = db.query(
         models.Transaction.id,

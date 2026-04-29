@@ -145,6 +145,7 @@ def read_transactions(
     customer_name: Optional[str] = Query(None, description="Filter by customer/shop name (partial match)"),
     order_no: Optional[str] = Query(None, description="Filter by order number"),
     timeframe: str = Query("all", description="daily, weekly, monthly, yearly, all"),
+    tz_offset: int = Query(5, description="Client UTC offset in hours"),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     company_id = current_user.company_id
@@ -159,7 +160,7 @@ def read_transactions(
         models.Transaction.company_id == company_id
     )
     
-    start_date = get_date_range(timeframe)
+    start_date = get_date_range(timeframe, tz_offset)
     if start_date != datetime.min:
         query = query.filter(models.Transaction.date >= start_date)
 

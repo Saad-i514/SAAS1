@@ -93,9 +93,10 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
       return;
     }
 
-    // Prompt for company details
-    const companyName = prompt('Enter Company Name:', 'AL-Fursan') || 'Company Name';
-    const companyPhone = prompt('Enter Company Phone Number:', '+92 300 1234567') || '';
+    // Read company details from stored user session
+    const _storedUser = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
+    const companyName = _storedUser?.company?.name || 'Company Name';
+    const companyPhone = '';
 
     const dateRangeText = startDate || endDate 
       ? `Period: ${startDate || 'Beginning'} to ${endDate || 'Present'}`

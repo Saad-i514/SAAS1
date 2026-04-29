@@ -27,17 +27,9 @@ def _get_company_id(current_user: models.User, db: Session):
     return first.id if first else None
 
 
-def _start_date(timeframe: str) -> datetime:
-    now = datetime.utcnow()
-    if timeframe == "daily":
-        return now.replace(hour=0, minute=0, second=0, microsecond=0)
-    if timeframe == "weekly":
-        return now - timedelta(days=7)
-    if timeframe == "monthly":
-        return now - timedelta(days=30)
-    if timeframe == "yearly":
-        return now - timedelta(days=365)
-    return datetime.min  # "all" or unknown → no lower bound
+def _start_date(timeframe: str, tz_offset_hours: int = 5) -> datetime:
+    from app.utils import get_date_range
+    return get_date_range(timeframe, tz_offset_hours)
 
 
 def _sum_debit(db: Session, company_id: int, tx_type, start: datetime) -> float:
@@ -71,6 +63,7 @@ def _sum_debit_range(
 @router.get("/summary")
 def get_dashboard_summary(
     timeframe: str = Query("monthly", description="daily | weekly | monthly | yearly | all"),
+    tz_offset: int = Query(5, description="Client UTC offset in hours"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -79,7 +72,7 @@ def get_dashboard_summary(
         if company_id is None:
             return {**_EMPTY_SUMMARY, "timeframe": timeframe}
 
-        start = _start_date(timeframe)
+        start = _start_date(timeframe, tz_offset)
 
         # ── Query 1: Combined Counts (One Trip) ─────────────────────────────
         counts = db.query(

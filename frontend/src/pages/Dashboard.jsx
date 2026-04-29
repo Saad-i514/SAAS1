@@ -66,6 +66,13 @@ function SkeletonCard() {
   );
 }
 
+// Format large Y-axis numbers compactly: 2500000 → "2.5M", 150000 → "150K"
+const fmtYAxis = (value) => {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (value >= 1_000)     return `${(value / 1_000).toFixed(value % 1_000 === 0 ? 0 : 0)}K`;
+  return String(value);
+};
+
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
@@ -287,7 +294,7 @@ function Dashboard() {
               <div className="h-full bg-gray-50 rounded-xl animate-pulse" />
             ) : charts?.monthly_sales && charts.monthly_sales.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={charts.monthly_sales} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <AreaChart data={charts.monthly_sales} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                   <defs>
                     <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
@@ -300,7 +307,13 @@ function Dashboard() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#94a3b8', fontSize: 11 }}
+                    tickFormatter={fmtYAxis}
+                    width={48}
+                  />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px', fontSize: '12px' }} />
                   <Area type="monotone" dataKey="sales" stroke="#6366f1" strokeWidth={2.5} fill="url(#salesGrad)" name="Sales (Rs)" dot={false} activeDot={{ r: 5, fill: '#6366f1' }} />

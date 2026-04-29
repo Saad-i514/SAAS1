@@ -2,6 +2,9 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
+// Browser's UTC offset in hours (e.g. PKT = +5, EST = -5)
+const TZ_OFFSET = -new Date().getTimezoneOffset() / 60;
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -15,6 +18,8 @@ api.interceptors.request.use(
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+    // Automatically attach timezone offset to every request
+    config.params = { tz_offset: TZ_OFFSET, ...config.params };
     return config;
   },
   (error) => Promise.reject(error)

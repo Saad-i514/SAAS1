@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Download, FileSpreadsheet, Package, Users, Activity,
   RefreshCcw, Printer, FileDown,
-  BarChart2, ShoppingBag
+  BarChart2, ShoppingBag, ChevronDown, ChevronRight, User
 } from 'lucide-react';
 import api from '../services/api';
 import CustomerReportModal from '../components/CustomerReportModal';
@@ -19,10 +19,40 @@ function Reports() {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('sales');
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
-  const itemsPerPage = 25;
+  const [expandedCustomers, setExpandedCustomers] = useState(new Set());
+
+  // Group items by customer name
+  const groupedByCustomer = useMemo(() => {
+    const { items = [] } = reportData || {};
+    const map = new Map();
+    items.forEach((item, globalIdx) => {
+      const key = item.customer_name || '(No Customer)';
+      if (!map.has(key)) {
+        map.set(key, { customer: key, items: [], totalSale: 0, totalCost: 0, totalProfit: 0, totalQty: 0 });
+      }
+      const group = map.get(key);
+      group.items.push({ ...item, _globalIdx: globalIdx });
+      group.totalSale   += item.total_sale_price  || 0;
+      group.totalCost   += item.total_cost_price   || 0;
+      group.totalProfit += item.profit             || 0;
+      group.totalQty    += item.quantity           || 0;
+    });
+    // Sort groups by total sale descending
+    return Array.from(map.values()).sort((a, b) => b.totalSale - a.totalSale);
+  }, [reportData]);
+
+  const toggleCustomer = (customer) => {
+    setExpandedCustomers(prev => {
+      const next = new Set(prev);
+      next.has(customer) ? next.delete(customer) : next.add(customer);
+      return next;
+    });
+  };
+
+  const expandAll  = () => setExpandedCustomers(new Set(groupedByCustomer.map(g => g.customer)));
+  const collapseAll = () => setExpandedCustomers(new Set());
 
   const fetchReportData = useCallback(async () => {
     setLoading(true);
@@ -30,7 +60,6 @@ function Reports() {
       const { data } = await api.get(`/reports/sales-summary?timeframe=${timeframe}`);
       setReportData(data);
       setSelectedIds([]);
-      setCurrentPage(1);
     } catch (err) {
       console.error('Failed to fetch report data', err);
     } finally {
@@ -169,9 +198,10 @@ function Reports() {
       const itemsToPrint = selectedIds.length > 0 ? items.filter((_, i) => selectedIds.includes(i)) : items;
       if (itemsToPrint.length === 0) { alert('No items to print.'); return; }
 
-      // Prompt for company details
-      const companyName = prompt('Enter Company Name:', 'AL-Fursan') || 'Company Name';
-      const companyPhone = prompt('Enter Company Phone Number:', '+92 300 1234567') || '';
+      // Read company details from stored user session
+      const _storedUser = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
+      const companyName = _storedUser?.company?.name || 'Company Name';
+      const companyPhone = '';
 
       const totals = itemsToPrint.reduce((acc, item) => ({
         qty: acc.qty + (item.quantity || 0),
@@ -310,8 +340,6 @@ function Reports() {
   // Sales Report View
   const { items = [], summary = {} } = reportData || {};
   const isProfit = (summary.total_profit || 0) >= (summary.total_loss || 0);
-  const totalPages = Math.ceil(items.length / itemsPerPage);
-  const paginated = items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -386,28 +414,34 @@ function Reports() {
         </div>
       )}
 
-      {/* Data Table */}
+      {/* Data Table — grouped by customer */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-bold text-gray-900">Itemized Ledger</h3>
-          <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">{items.length} records</span>
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center space-x-3">
+            <h3 className="font-bold text-gray-900">Itemized Ledger</h3>
+            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">{items.length} records</span>
+            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-full">{groupedByCustomer.length} customers</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button onClick={expandAll}
+              className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all">
+              Expand All
+            </button>
+            <button onClick={collapseAll}
+              className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all">
+              Collapse All
+            </button>
+          </div>
         </div>
-        <div className="overflow-x-auto -mx-4 sm:mx-0">
+
+        <div className="overflow-x-auto">
           <table className="w-full text-xs sm:text-sm whitespace-nowrap">
             <thead className="bg-gray-50/80 border-b border-gray-100">
               <tr className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                <th className="px-4 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 cursor-pointer"
-                    checked={items.length > 0 && selectedIds.length === items.length}
-                    onChange={e => setSelectedIds(e.target.checked ? items.map((_, i) => i) : [])}
-                  />
-                </th>
-                <th className="px-4 py-3 text-left">Date</th>
-                <th className="px-4 py-3 text-left">Product</th>
+                <th className="px-4 py-3 w-8"></th>
+                <th className="px-4 py-3 text-left">Customer / Product</th>
                 <th className="px-4 py-3 text-left">Category</th>
-                <th className="px-4 py-3 text-left">Customer</th>
+                <th className="px-4 py-3 text-left">Date</th>
                 <th className="px-4 py-3 text-center">Qty</th>
                 <th className="px-4 py-3 text-right">Unit Price</th>
                 <th className="px-4 py-3 text-right bg-blue-50/50">Total Sale</th>
@@ -415,55 +449,105 @@ function Reports() {
                 <th className="px-4 py-3 text-right bg-emerald-50/50">Profit</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody>
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
-                    <td colSpan="10" className="px-4 py-4">
+                    <td colSpan="9" className="px-4 py-4">
                       <div className="h-6 bg-gray-100 rounded animate-pulse" />
                     </td>
                   </tr>
                 ))
-              ) : paginated.length === 0 ? (
+              ) : groupedByCustomer.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="px-4 py-16 text-center">
+                  <td colSpan="9" className="px-4 py-16 text-center">
                     <RefreshCcw size={36} className="mx-auto text-gray-300 mb-3" />
                     <p className="font-bold text-gray-700">No Sales Data</p>
                     <p className="text-gray-400 text-sm mt-1">No transactions recorded for this period.</p>
                   </td>
                 </tr>
               ) : (
-                paginated.map((item) => {
-                  const globalIdx = items.indexOf(item);
-                  const isSelected = selectedIds.includes(globalIdx);
+                groupedByCustomer.map((group) => {
+                  const isExpanded = expandedCustomers.has(group.customer);
+                  const groupProfit = group.totalProfit;
                   return (
-                    <tr key={globalIdx} className={`hover:bg-gray-50/60 transition-colors group ${isSelected ? 'bg-indigo-50/30' : ''}`}>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 cursor-pointer"
-                          checked={isSelected}
-                          onChange={() => setSelectedIds(prev =>
-                            prev.includes(globalIdx) ? prev.filter(id => id !== globalIdx) : [...prev, globalIdx]
-                          )}
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 font-medium">
-                        {item.date ? new Date(item.date).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-4 py-3 font-bold text-gray-900 max-w-[180px] truncate">{item.product_name || '-'}</td>
-                      <td className="px-4 py-3">
-                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md text-xs font-semibold">{item.category || '-'}</span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 max-w-[120px] truncate">{item.customer_name || '-'}</td>
-                      <td className="px-4 py-3 text-center font-bold text-gray-700">{item.quantity}</td>
-                      <td className="px-4 py-3 text-right font-mono text-gray-600">Rs {Number(item.unit_sale_price || 0).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right font-mono font-bold text-blue-700 bg-blue-50/20">Rs {Number(item.total_sale_price || 0).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-orange-700 bg-orange-50/20">Rs {Number(item.total_cost_price || 0).toFixed(2)}</td>
-                      <td className={`px-4 py-3 text-right font-mono font-bold bg-emerald-50/20 ${item.profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                        {item.profit >= 0 ? '+' : ''}Rs {Number(item.profit || 0).toFixed(2)}
-                      </td>
-                    </tr>
+                    <React.Fragment key={group.customer}>
+                      {/* ── Customer header row ── */}
+                      <tr
+                        className="bg-indigo-50/60 hover:bg-indigo-100/60 cursor-pointer border-t border-indigo-100 transition-colors"
+                        onClick={() => toggleCustomer(group.customer)}
+                      >
+                        <td className="px-4 py-3 text-center">
+                          {isExpanded
+                            ? <ChevronDown size={15} className="text-indigo-500 mx-auto" />
+                            : <ChevronRight size={15} className="text-indigo-400 mx-auto" />}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <User size={13} className="text-indigo-600" />
+                            </div>
+                            <div>
+                              <span className="font-black text-gray-900 text-sm">{group.customer}</span>
+                              <span className="ml-2 text-xs text-gray-400 font-medium">{group.items.length} item{group.items.length !== 1 ? 's' : ''}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-400 text-xs">—</td>
+                        <td className="px-4 py-3 text-gray-400 text-xs">—</td>
+                        <td className="px-4 py-3 text-center font-black text-gray-800">{group.totalQty}</td>
+                        <td className="px-4 py-3 text-gray-400 text-xs text-right">—</td>
+                        <td className="px-4 py-3 text-right font-black text-blue-700 bg-blue-50/30">
+                          Rs {Number(group.totalSale).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-3 text-right font-black text-orange-700 bg-orange-50/30">
+                          Rs {Number(group.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className={`px-4 py-3 text-right font-black bg-emerald-50/30 ${groupProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                          {groupProfit >= 0 ? '+' : ''}Rs {Number(groupProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+
+                      {/* ── Child rows ── */}
+                      {isExpanded && group.items.map((item, rowIdx) => {
+                        const isSelected = selectedIds.includes(item._globalIdx);
+                        return (
+                          <tr
+                            key={item._globalIdx}
+                            className={`border-t border-gray-50 hover:bg-gray-50/60 transition-colors ${isSelected ? 'bg-indigo-50/30' : rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
+                          >
+                            <td className="px-4 py-2.5 text-center pl-8">
+                              <input
+                                type="checkbox"
+                                className="w-3.5 h-3.5 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                                checked={isSelected}
+                                onChange={() => setSelectedIds(prev =>
+                                  prev.includes(item._globalIdx)
+                                    ? prev.filter(id => id !== item._globalIdx)
+                                    : [...prev, item._globalIdx]
+                                )}
+                              />
+                            </td>
+                            <td className="px-4 py-2.5 font-semibold text-gray-800 max-w-[200px] truncate pl-12">
+                              {item.product_name || '-'}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md text-xs font-semibold">{item.category || '-'}</span>
+                            </td>
+                            <td className="px-4 py-2.5 text-gray-500 font-medium">
+                              {item.date ? new Date(item.date).toLocaleDateString() : '-'}
+                            </td>
+                            <td className="px-4 py-2.5 text-center font-bold text-gray-700">{item.quantity}</td>
+                            <td className="px-4 py-2.5 text-right font-mono text-gray-600">Rs {Number(item.unit_sale_price || 0).toFixed(2)}</td>
+                            <td className="px-4 py-2.5 text-right font-mono font-bold text-blue-700 bg-blue-50/20">Rs {Number(item.total_sale_price || 0).toFixed(2)}</td>
+                            <td className="px-4 py-2.5 text-right font-mono text-orange-700 bg-orange-50/20">Rs {Number(item.total_cost_price || 0).toFixed(2)}</td>
+                            <td className={`px-4 py-2.5 text-right font-mono font-bold bg-emerald-50/20 ${item.profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                              {item.profit >= 0 ? '+' : ''}Rs {Number(item.profit || 0).toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
                   );
                 })
               )}
@@ -471,19 +555,12 @@ function Reports() {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Footer */}
         <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500 font-medium">
           <span>
             {selectedIds.length > 0 ? `${selectedIds.length} selected · ` : ''}
-            {paginated.length} of {items.length} records
+            {groupedByCustomer.length} customers · {items.length} records
           </span>
-          {totalPages > 1 && (
-            <div className="flex items-center space-x-1">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Prev</button>
-              <span className="px-3 py-1.5 font-bold text-gray-700">{currentPage} / {totalPages}</span>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next</button>
-            </div>
-          )}
         </div>
       </div>
       <CustomerReportModal 
