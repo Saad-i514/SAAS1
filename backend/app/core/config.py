@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     # Mistral — pixtral-12b-2409 vision model for image scanning
     MISTRAL_API_KEY: str = ""
 
+    # ── Email Notifications ──────────────────────────────────────────────────
+    # Resend API key — get free key at resend.com (3000 emails/month free)
+    RESEND_API_KEY: str = ""
+    # Recipient email for all notifications
+    NOTIFY_EMAIL: str = "gulraiz.butt9@gmail.com"
+    # Sender address — must be verified in Resend dashboard
+    # For testing use: onboarding@resend.dev
+    NOTIFY_FROM: str = "onboarding@resend.dev"
+    # Secret token to protect the cron endpoint — set any random string
+    CRON_SECRET: str = ""
+
     model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()

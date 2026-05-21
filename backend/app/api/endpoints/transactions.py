@@ -351,6 +351,37 @@ def create_transaction(
         "amount": debit,
     })
 
+    # ── Email notification (fire-and-forget background task) ─────────────────
+    try:
+        from app.core.config import settings as _cfg
+        if _cfg.RESEND_API_KEY:
+            import asyncio as _asyncio
+            from app.services.email import send_transaction_notification
+            # Get company name
+            _company = db.query(models.Company).filter(
+                models.Company.id == current_user.company_id
+            ).first()
+            _company_name = _company.name if _company else "Your Company"
+            _asyncio.create_task(send_transaction_notification(
+                company_name=_company_name,
+                tx_type=tx_type.value,
+                order_no=transaction.order_no or str(transaction.id),
+                items=[{
+                    "product_name": transaction_in.product_name,
+                    "quantity": qty,
+                    "unit_price": unit_price,
+                    "discount": discount,
+                }],
+                total_amount=debit,
+                customer_name=transaction_in.customer_name,
+                payment_term=transaction_in.payment_term,
+                tx_date=transaction.date or datetime.utcnow(),
+                to_email=_cfg.NOTIFY_EMAIL,
+                from_email=_cfg.NOTIFY_FROM,
+            ))
+    except Exception as _e:
+        logger.warning(f"Email notification skipped: {_e}")
+
     return transaction
 
 
@@ -469,6 +500,40 @@ def create_bulk_order(
         "total_amount": round(total_amount, 2),
         "customer": order_in.customer_name,
     })
+
+    # ── Email notification (fire-and-forget background task) ─────────────────
+    try:
+        from app.core.config import settings as _cfg
+        if _cfg.RESEND_API_KEY:
+            import asyncio as _asyncio
+            from app.services.email import send_transaction_notification
+            _company = db.query(models.Company).filter(
+                models.Company.id == company_id
+            ).first()
+            _company_name = _company.name if _company else "Your Company"
+            _email_items = [
+                {
+                    "product_name": item.product_name,
+                    "quantity": item.quantity,
+                    "unit_price": item.unit_price,
+                    "discount": item.discount or 0,
+                }
+                for item in order_in.items
+            ]
+            _asyncio.create_task(send_transaction_notification(
+                company_name=_company_name,
+                tx_type=tx_type.value,
+                order_no=order_no,
+                items=_email_items,
+                total_amount=round(total_amount, 2),
+                customer_name=order_in.customer_name,
+                payment_term=order_in.payment_term,
+                tx_date=tx_date,
+                to_email=_cfg.NOTIFY_EMAIL,
+                from_email=_cfg.NOTIFY_FROM,
+            ))
+    except Exception as _e:
+        logger.warning(f"Email notification skipped: {_e}")
 
     return schemas.transaction.BulkOrderResponse(
         order_no=order_no,
