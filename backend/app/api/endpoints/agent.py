@@ -230,6 +230,14 @@ async def scan_image(
 
         validated = validate_extracted_data(extraction_result["data"])
 
+        # Handle reports/screenshots — not an error, just wrong image type
+        if validated["record_type"] == "report_or_unknown":
+            return {
+                "success": False,
+                "is_wrong_type": True,
+                "message": validated["user_message"],
+            }
+
         if not validated["fields"]:
             return {
                 "success": False,

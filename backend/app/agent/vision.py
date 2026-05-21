@@ -10,16 +10,26 @@ import logging
 logger = logging.getLogger(__name__)
 
 VISION_EXTRACTION_PROMPT = """You are a precise data extraction assistant for a business management system.
-Analyze this image carefully and extract structured business data.
+Analyze this image carefully and determine what type of document it is.
 
-For each field:
+FIRST — identify the document type:
+- "product"     → a product label, price tag, catalogue page, or product list with NEW items to add
+- "supplier"    → a supplier card, business card, or vendor contact sheet
+- "transaction" → an invoice, receipt, purchase order, or bill for a NEW transaction to record
+- "report"      → an existing report, ledger, or data export (already in the system — cannot add)
+- "unknown"     → anything else (photo, screenshot of app, unrelated document)
+
+If the document type is "report" or "unknown", return immediately with:
+{"record_type": "report_or_unknown", "reason": "brief explanation of what the image shows", "product": {}, "supplier": {}, "transaction": {}, "missing_required_fields": [], "confidence": "high", "notes": null}
+
+Otherwise, extract ALL visible fields. For each field:
 - If clearly visible and readable: provide the exact value
 - If partially visible or unclear: provide your best reading with "(uncertain)" appended
 - If completely absent: use null
 
 Return ONLY this exact JSON structure, no markdown, no explanation:
 {
-  "record_type": "product | supplier | transaction | unknown",
+  "record_type": "product | supplier | transaction",
   "product": {
     "article_no": null,
     "name": null,
@@ -132,16 +142,34 @@ async def extract_data_from_image(
 
 def validate_extracted_data(data: dict) -> dict:
     """
-    Validate extracted data and return a structured result with:
-    - confirmed fields (non-null)
-    - missing required fields
-    - confidence level
-    - whether it can be saved as-is
+    Validate extracted data and return a structured result.
+    Handles report/unknown images with a clear user-friendly message.
     """
     record_type = data.get("record_type", "unknown")
     missing = data.get("missing_required_fields", [])
     confidence = data.get("confidence", "low")
     notes = data.get("notes")
+
+    # Handle reports and unrecognised images gracefully
+    if record_type == "report_or_unknown":
+        reason = data.get("reason", "This image does not appear to be an invoice, receipt, or product label.")
+        return {
+            "record_type": "report_or_unknown",
+            "confidence": confidence,
+            "missing_fields": [],
+            "notes": reason,
+            "fields": {},
+            "can_save": False,
+            "user_message": (
+                f"ℹ️ I can see this image but I can't add anything from it.\n\n"
+                f"**Reason:** {reason}\n\n"
+                f"I can only extract data from:\n"
+                f"- 📄 **Invoices or receipts** (to record a new transaction)\n"
+                f"- 🏷️ **Product labels or price lists** (to add new products)\n"
+                f"- 📇 **Supplier/vendor cards** (to add a new supplier)\n\n"
+                f"If you want to ask questions about this data, just type your question instead!"
+            ),
+        }
 
     result = {
         "record_type": record_type,
@@ -150,6 +178,7 @@ def validate_extracted_data(data: dict) -> dict:
         "notes": notes,
         "fields": {},
         "can_save": len(missing) == 0,
+        "user_message": None,
     }
 
     if record_type == "product":

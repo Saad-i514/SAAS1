@@ -311,7 +311,12 @@ function Chatbot() {
       });
 
       if (!data.success) {
-        addMessage({ type: 'bot', isError: true, text: `⚠️ ${data.message}` });
+        // is_wrong_type = report/screenshot — show as info message, not error
+        addMessage({
+          type: 'bot',
+          isError: !data.is_wrong_type,
+          text: data.is_wrong_type ? data.message : `⚠️ ${data.message}`,
+        });
         return;
       }
 
