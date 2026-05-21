@@ -2,6 +2,7 @@
 Vision tool: uses Mistral pixtral model to extract structured data from images.
 Model: pixtral-12b-2409 via Mistral API (key loaded from MISTRAL_API_KEY env var).
 Returns structured data with confidence flags and missing field markers.
+Version: 2
 """
 from __future__ import annotations
 
