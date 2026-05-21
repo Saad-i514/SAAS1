@@ -97,6 +97,15 @@ function MessageBubble({ msg, onRevert }) {
 }
 
 // ---------------------------------------------------------------------------
+// Required fields per record type
+// ---------------------------------------------------------------------------
+const REQUIRED_FIELDS = {
+  product:     ['article_no', 'name', 'purchase_price', 'sale_price'],
+  supplier:    ['supplier_no', 'name'],
+  transaction: ['type', 'product_name', 'quantity', 'unit_price'],
+};
+
+// ---------------------------------------------------------------------------
 // Scanned data confirmation card
 // ---------------------------------------------------------------------------
 function ScannedDataCard({ data, onConfirm, onDiscard, loading }) {
@@ -106,11 +115,24 @@ function ScannedDataCard({ data, onConfirm, onDiscard, loading }) {
     setFields(prev => ({ ...prev, [key]: value }));
   };
 
+  // Compute which required fields are still empty after user edits
+  const requiredForType = REQUIRED_FIELDS[data.record_type] || [];
+  const stillMissing = requiredForType.filter(f => {
+    const val = fields[f];
+    return val === undefined || val === null || String(val).trim() === '';
+  });
+  const canSave = stillMissing.length === 0;
+
   const confidenceColor = {
-    high: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+    high:   'text-emerald-600 bg-emerald-50 border-emerald-200',
     medium: 'text-amber-600 bg-amber-50 border-amber-200',
-    low: 'text-red-600 bg-red-50 border-red-200',
+    low:    'text-red-600 bg-red-50 border-red-200',
   }[data.confidence] || 'text-gray-600 bg-gray-50 border-gray-200';
+
+  // Show all required fields — even ones not extracted (so user can fill them in)
+  const allFieldKeys = [
+    ...new Set([...requiredForType, ...Object.keys(fields)])
+  ];
 
   return (
     <div className="bg-white border border-indigo-100 rounded-2xl shadow-md p-4 w-full">
@@ -124,50 +146,83 @@ function ScannedDataCard({ data, onConfirm, onDiscard, loading }) {
         </span>
       </div>
 
-      {data.missing_fields?.length > 0 && (
+      {/* Missing fields warning — updates live as user types */}
+      {stillMissing.length > 0 && (
         <div className="mb-3 p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start space-x-2">
           <AlertTriangle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-amber-700 font-medium">
-            Missing required fields: <strong>{data.missing_fields.join(', ')}</strong>
+          <div>
+            <p className="text-xs text-amber-700 font-semibold">
+              Please fill in required fields before saving:
+            </p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              {stillMissing.map(f => f.replace(/_/g, ' ')).join(', ')}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {canSave && (
+        <div className="mb-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center space-x-2">
+          <CheckCircle size={14} className="text-emerald-600 flex-shrink-0" />
+          <p className="text-xs text-emerald-700 font-semibold">
+            All required fields are filled. Ready to save!
           </p>
         </div>
       )}
 
       <div className="space-y-2.5 mb-4">
-        {Object.entries(fields).map(([key, val]) => (
-          <div key={key}>
-            <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider block mb-1">
-              {key.replace(/_/g, ' ')}
-            </label>
-            <input
-              type="text"
-              value={val ?? ''}
-              onChange={e => handleChange(key, e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all"
-            />
-          </div>
-        ))}
+        {allFieldKeys.map((key) => {
+          const isRequired = requiredForType.includes(key);
+          const val = fields[key] ?? '';
+          const isEmpty = String(val).trim() === '';
+          return (
+            <div key={key}>
+              <label className={`text-[10px] uppercase font-bold tracking-wider block mb-1 ${
+                isRequired && isEmpty ? 'text-red-500' : 'text-gray-400'
+              }`}>
+                {key.replace(/_/g, ' ')}
+                {isRequired && <span className="text-red-500 ml-0.5">*</span>}
+              </label>
+              <input
+                type="text"
+                value={val}
+                onChange={e => handleChange(key, e.target.value)}
+                placeholder={isRequired ? `Required` : 'Optional'}
+                className={`w-full bg-gray-50 border rounded-lg px-2.5 py-1.5 text-sm outline-none transition-all
+                  ${isRequired && isEmpty
+                    ? 'border-red-300 focus:ring-2 focus:ring-red-500/20 focus:border-red-400'
+                    : 'border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400'
+                  }`}
+              />
+            </div>
+          );
+        })}
       </div>
 
       <div className="flex space-x-2">
         <button
           onClick={() => onDiscard()}
           disabled={loading}
-          className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-colors flex items-center justify-center space-x-1.5"
+          className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-colors flex items-center justify-center space-x-1.5 disabled:opacity-50"
         >
           <Trash2 size={12} />
           <span>Discard</span>
         </button>
         <button
-          onClick={() => onConfirm(data.pending_id, fields)}
-          disabled={loading || data.missing_fields?.length > 0}
-          className="flex-[2] py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center space-x-1.5"
+          onClick={() => canSave && onConfirm(data.pending_id, fields)}
+          disabled={loading || !canSave}
+          title={!canSave ? `Fill in: ${stillMissing.join(', ')}` : 'Save to database'}
+          className={`flex-[2] py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5
+            ${canSave && !loading
+              ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
         >
           {loading
             ? <Loader2 size={12} className="animate-spin" />
             : <CheckCircle size={12} />
           }
-          <span>{loading ? 'Saving...' : 'Confirm & Save'}</span>
+          <span>{loading ? 'Saving...' : canSave ? 'Confirm & Save' : `Fill ${stillMissing.length} field${stillMissing.length > 1 ? 's' : ''} first`}</span>
         </button>
       </div>
     </div>
