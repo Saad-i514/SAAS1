@@ -11,6 +11,7 @@ class ProductBase(BaseModel):
     in_hand_qty: Optional[int] = Field(0, ge=0)
     category: Optional[str] = Field(None, max_length=100)
     status: Optional[str] = Field("Active", max_length=20)
+    image_url: Optional[str] = Field(None, max_length=500)
     dynamic_data: Optional[dict] = {}
 
     @field_validator("article_no", "name", mode="before")
@@ -44,6 +45,7 @@ class ProductUpdate(BaseModel):
     in_hand_qty: Optional[int] = Field(None, ge=0)
     category: Optional[str] = Field(None, max_length=100)
     status: Optional[str] = Field(None, max_length=20)
+    image_url: Optional[str] = Field(None, max_length=500)
     dynamic_data: Optional[dict] = None
 
     @field_validator("name", mode="before")

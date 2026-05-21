@@ -148,8 +148,8 @@ function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Business Overview</h1>
-          <p className="text-gray-500 text-sm mt-0.5 flex items-center space-x-2">
+          <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Business Overview</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5 flex items-center space-x-2">
             <span>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Loading data...'}</span>
             {liveEvent && (
               <span className="inline-flex items-center space-x-1 text-emerald-600 text-xs font-semibold">
@@ -234,22 +234,22 @@ function Dashboard() {
       {/* Secondary KPIs */}
       {!loading && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center space-x-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-4 flex items-center space-x-4">
             <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
               <Boxes size={18} className="text-indigo-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-medium">Total Products</p>
-              <p className="text-xl font-black text-gray-900">{fmt(summary?.product_count)}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">Total Products</p>
+              <p className="text-xl font-black text-gray-900 dark:text-white">{fmt(summary?.product_count)}</p>
             </div>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center space-x-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-4 flex items-center space-x-4">
             <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
               <Users size={18} className="text-blue-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-medium">Suppliers</p>
-              <p className="text-xl font-black text-gray-900">{fmt(summary?.supplier_count)}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">Suppliers</p>
+              <p className="text-xl font-black text-gray-900 dark:text-white">{fmt(summary?.supplier_count)}</p>
             </div>
           </div>
           <div className={`rounded-2xl border shadow-sm p-4 flex items-center space-x-4 ${
@@ -261,19 +261,19 @@ function Dashboard() {
               <AlertTriangle size={18} className={(summary?.low_stock_count || 0) > 0 ? 'text-amber-600' : 'text-gray-400'} />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-medium">Low Stock</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">Low Stock</p>
               <p className={`text-xl font-black ${(summary?.low_stock_count || 0) > 0 ? 'text-amber-700' : 'text-gray-900'}`}>
                 {fmt(summary?.low_stock_count)}
               </p>
             </div>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center space-x-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-4 flex items-center space-x-4">
             <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
               <Activity size={18} className="text-emerald-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-medium">Purchases</p>
-              <p className="text-xl font-black text-gray-900">{fmtCurrency(summary?.total_purchase)}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">Purchases</p>
+              <p className="text-xl font-black text-gray-900 dark:text-white">{fmtCurrency(summary?.total_purchase)}</p>
             </div>
           </div>
         </div>
@@ -282,16 +282,16 @@ function Dashboard() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 12-Month Trend */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-4 sm:p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base font-bold text-gray-900">Revenue Trend</h3>
-              <p className="text-xs text-gray-500 mt-0.5">12-month sales vs purchases</p>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">Revenue Trend</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">12-month sales vs purchases</p>
             </div>
           </div>
           <div className="h-64 sm:h-72 min-h-[250px]">
             {loading ? (
-              <div className="h-full bg-gray-50 rounded-xl animate-pulse" />
+              <div className="h-full bg-gray-50 dark:bg-slate-800 rounded-xl animate-pulse" />
             ) : charts?.monthly_sales && charts.monthly_sales.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={charts.monthly_sales} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
@@ -329,14 +329,14 @@ function Dashboard() {
         </div>
 
         {/* Category Distribution */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-4 sm:p-6">
           <div className="mb-6">
-            <h3 className="text-base font-bold text-gray-900">Product Categories</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Distribution by count</p>
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Product Categories</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Distribution by count</p>
           </div>
           <div className="h-40 sm:h-48 min-h-[180px]">
             {loading ? (
-              <div className="h-full bg-gray-50 rounded-xl animate-pulse" />
+              <div className="h-full bg-gray-50 dark:bg-slate-800 rounded-xl animate-pulse" />
             ) : charts?.sales_distribution && charts.sales_distribution.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -367,9 +367,9 @@ function Dashboard() {
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                  <span className="text-xs text-gray-600 truncate max-w-[120px]">{item.name}</span>
+                  <span className="text-xs text-gray-600 dark:text-slate-300 truncate max-w-[120px]">{item.name}</span>
                 </div>
-                <span className="text-xs font-bold text-gray-900">{item.value}</span>
+                <span className="text-xs font-bold text-gray-900 dark:text-white">{item.value}</span>
               </div>
             ))}
           </div>
@@ -379,17 +379,17 @@ function Dashboard() {
       {/* Bottom Row: Top Products + Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Products */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-4 sm:p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-base font-bold text-gray-900">Top Products</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Last 30 days by quantity</p>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">Top Products</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Last 30 days by quantity</p>
             </div>
           </div>
           {loading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                <div key={i} className="h-10 bg-gray-100 dark:bg-slate-800 rounded-xl animate-pulse" />
               ))}
             </div>
           ) : charts?.top_products?.length > 0 ? (
@@ -402,7 +402,7 @@ function Dashboard() {
                     <span className="text-xs font-black text-gray-400 w-4 flex-shrink-0">#{i + 1}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-gray-800 truncate">{p.name}</span>
+                        <span className="text-sm font-semibold text-gray-800 dark:text-white truncate">{p.name}</span>
                         <span className="text-xs font-bold text-gray-600 ml-2 flex-shrink-0">{p.qty} units</span>
                       </div>
                       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -425,17 +425,17 @@ function Dashboard() {
         </div>
 
         {/* Recent Transactions */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-4 sm:p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-base font-bold text-gray-900">Recent Activity</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Latest transactions</p>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">Recent Activity</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Latest transactions</p>
             </div>
           </div>
           {loading ? (
             <div className="space-y-3">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />
+                <div key={i} className="h-12 bg-gray-100 dark:bg-slate-800 rounded-xl animate-pulse" />
               ))}
             </div>
           ) : recentTx.length > 0 ? (
@@ -443,16 +443,16 @@ function Dashboard() {
               {recentTx.map((tx) => {
                 const cfg = txTypeConfig[tx.type] || { label: tx.type, color: 'bg-gray-100 text-gray-700' };
                 return (
-                  <div key={tx.id} className="flex items-center space-x-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+                  <div key={tx.id} className="flex items-center space-x-3 p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${cfg.color}`}>
                       <Activity size={14} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{tx.product_name || tx.customer_name || 'Transaction'}</p>
-                      <p className="text-xs text-gray-400">{tx.date ? new Date(tx.date).toLocaleDateString() : ''}</p>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{tx.product_name || tx.customer_name || 'Transaction'}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500">{tx.date ? new Date(tx.date).toLocaleDateString() : ''}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-bold text-gray-900">Rs {Number(tx.debit || 0).toLocaleString()}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Rs {Number(tx.debit || 0).toLocaleString()}</p>
                       <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-md ${cfg.color}`}>{cfg.label}</span>
                     </div>
                   </div>

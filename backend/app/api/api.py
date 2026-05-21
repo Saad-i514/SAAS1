@@ -1,5 +1,9 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, users, suppliers, products, transactions, dashboard, reports, dynamic_columns, companies, agent, notifications
+from app.api.endpoints import (
+    auth, users, suppliers, products, transactions, dashboard,
+    reports, dynamic_columns, companies, agent, notifications,
+    customers, audit_log,
+)
 
 api_router = APIRouter()
 api_router.include_router(auth.router, tags=["login"])
@@ -13,3 +17,5 @@ api_router.include_router(dynamic_columns.router, prefix="/dynamic-columns", tag
 api_router.include_router(companies.router, prefix="/companies", tags=["companies"])
 api_router.include_router(agent.router, prefix="/agent", tags=["agent"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+api_router.include_router(customers.router, prefix="/customers", tags=["customers"])
+api_router.include_router(audit_log.router, prefix="/audit-log", tags=["audit-log"])

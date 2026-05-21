@@ -4,21 +4,23 @@ import { logout } from '../services/authService';
 import {
   LayoutDashboard, Users as UsersIcon, Package, LogOut,
   FileText, Building2, UserCog, Menu, X, TrendingUp,
-  ChevronRight, Bell
+  ChevronRight, Bell, UserCircle, ArrowLeftRight, ShieldCheck, Sun, Moon,
 } from 'lucide-react';
 import Chatbot from './Chatbot';
+import { useTheme } from '../context/ThemeContext';
 
 function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { dark, toggle } = useTheme();
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
-      try { 
-        setUser(JSON.parse(userData)); 
+      try {
+        setUser(JSON.parse(userData));
       } catch (error) {
         console.error('Failed to parse user data:', error);
       }
@@ -38,14 +40,19 @@ function Layout() {
       { path: '/', icon: LayoutDashboard, label: 'Dashboard', color: 'text-indigo-400' },
       { path: '/suppliers', icon: UsersIcon, label: 'Suppliers', color: 'text-blue-400' },
       { path: '/products', icon: Package, label: 'Products', color: 'text-emerald-400' },
+      { path: '/customers', icon: UserCircle, label: 'Customers', color: 'text-cyan-400' },
+      { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions', color: 'text-violet-400' },
       { path: '/users', icon: UserCog, label: 'Employees', color: 'text-orange-400' },
       { path: '/reports', icon: FileText, label: 'Reports', color: 'text-pink-400' },
+      { path: '/audit-log', icon: ShieldCheck, label: 'Audit Log', color: 'text-yellow-400' },
     ];
   } else {
     navItems = [
       { path: '/', icon: LayoutDashboard, label: 'Dashboard', color: 'text-indigo-400' },
       { path: '/suppliers', icon: UsersIcon, label: 'Suppliers', color: 'text-blue-400' },
       { path: '/products', icon: Package, label: 'Products', color: 'text-emerald-400' },
+      { path: '/customers', icon: UserCircle, label: 'Customers', color: 'text-cyan-400' },
+      { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions', color: 'text-violet-400' },
     ];
   }
 
@@ -55,7 +62,7 @@ function Layout() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
@@ -67,7 +74,7 @@ function Layout() {
       {/* Sidebar */}
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-30 w-64 flex flex-col
-        bg-slate-900 border-r border-slate-800
+        bg-slate-900 dark:bg-slate-950 border-r border-slate-800
         transform transition-transform duration-300 ease-in-out
         lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
@@ -132,6 +139,14 @@ function Layout() {
 
         {/* Bottom actions */}
         <div className="p-3 border-t border-slate-800 flex-shrink-0 space-y-1">
+          {/* Dark mode toggle */}
+          <button
+            onClick={toggle}
+            className="flex items-center space-x-3 w-full px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200"
+          >
+            {dark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-slate-400" />}
+            <span className="font-medium text-sm">{dark ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
           <button
             onClick={handleLogout}
             className="flex items-center space-x-3 w-full px-3 py-2.5 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 group"
@@ -145,17 +160,17 @@ function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top header */}
-        <header className="h-16 bg-white border-b border-gray-100 flex items-center px-4 lg:px-6 gap-4 flex-shrink-0 z-10">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center px-4 lg:px-6 gap-4 flex-shrink-0 z-10">
           <button
-            className="lg:hidden text-gray-500 hover:text-gray-900 transition-colors p-1"
+            className="lg:hidden text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white transition-colors p-1"
             onClick={() => setIsSidebarOpen(true)}
           >
             <Menu size={22} />
           </button>
 
-          {/* Company name - centered on desktop */}
+          {/* Company name */}
           <div className="flex-1 flex items-center justify-center">
-            <h1 className="text-base font-bold text-gray-900 tracking-tight hidden sm:block">
+            <h1 className="text-base font-bold text-gray-900 dark:text-white tracking-tight hidden sm:block">
               {user?.role === 'SuperAdmin'
                 ? 'Super Admin Environment'
                 : (user?.company?.name || 'Business Management System')}
@@ -163,7 +178,15 @@ function Layout() {
           </div>
 
           <div className="flex items-center space-x-2">
-            <button className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+            {/* Dark mode quick toggle */}
+            <button
+              onClick={toggle}
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"
+              title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {dark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
               <Bell size={18} />
             </button>
             <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
@@ -173,7 +196,7 @@ function Layout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6 bg-slate-50">
+        <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6 bg-slate-50 dark:bg-slate-950">
           <Outlet />
           <Chatbot />
         </main>

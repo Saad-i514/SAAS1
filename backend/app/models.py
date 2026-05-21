@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float, Enum, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float, Enum, Boolean, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -21,6 +21,8 @@ class Company(Base):
     suppliers = relationship("Supplier", back_populates="company", cascade="all, delete-orphan")
     products = relationship("Product", back_populates="company", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="company", cascade="all, delete-orphan")
+    customers = relationship("Customer", back_populates="company", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="company", cascade="all, delete-orphan")
 
 
 class User(Base):
@@ -47,6 +49,11 @@ class Supplier(Base):
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     status = Column(String, default="Active", index=True)
+    # Payment tracking
+    outstanding_balance = Column(Float, default=0.0)  # Amount owed to supplier
+    payment_due_date = Column(DateTime, nullable=True)
+    total_purchased = Column(Float, default=0.0)       # Lifetime purchase total
+    total_paid = Column(Float, default=0.0)            # Lifetime payments made
     dynamic_data = Column(JSONB, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -66,6 +73,7 @@ class Product(Base):
     in_hand_qty = Column(Integer, default=0)
     category = Column(String, index=True, nullable=True)
     status = Column(String, default="Active", index=True)
+    image_url = Column(String, nullable=True)  # Product image URL/path
     dynamic_data = Column(JSONB, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -85,6 +93,7 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True, index=True) # Nullable for sales to random customers if not tracked
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True, index=True)  # Link to Customer master
     
     transaction_id = Column(String, index=True, nullable=True) # generated or provided
     order_no = Column(String, index=True, nullable=True)
@@ -107,6 +116,47 @@ class Transaction(Base):
     
     company = relationship("Company", back_populates="transactions")
     supplier = relationship("Supplier", back_populates="transactions")
+    customer = relationship("Customer", back_populates="transactions")
+
+
+class Customer(Base):
+    """Customer master list — enables credit limits, ledger, and payment history."""
+    __tablename__ = "customers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    name = Column(String, index=True, nullable=False)
+    phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    address = Column(String, nullable=True)
+    credit_limit = Column(Float, default=0.0)       # Max credit allowed
+    outstanding_balance = Column(Float, default=0.0) # Current amount owed by customer
+    total_purchased = Column(Float, default=0.0)     # Lifetime purchase total
+    total_paid = Column(Float, default=0.0)          # Lifetime payments received
+    status = Column(String, default="Active", index=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    company = relationship("Company", back_populates="customers")
+    transactions = relationship("Transaction", back_populates="customer")
+
+
+class AuditLog(Base):
+    """Tracks who created/edited/deleted what and when."""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    user_email = Column(String, nullable=True)       # Denormalized for history
+    action = Column(String, nullable=False, index=True)  # CREATE, UPDATE, DELETE
+    resource_type = Column(String, nullable=False, index=True)  # transaction, product, supplier, customer
+    resource_id = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    ip_address = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    company = relationship("Company", back_populates="audit_logs")
 
 
 # Future: Dynamic Columns table could be simply JSON in base models, or an EAV table

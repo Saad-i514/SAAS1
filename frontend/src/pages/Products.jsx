@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
-import { Plus, Search, Edit2, Trash2, X, Activity, Package, AlertTriangle, Users } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Activity, Package, AlertTriangle, Users, ImagePlus, Image } from 'lucide-react';
 import TransactionModal from '../components/TransactionModal';
 import BulkTransactionModal from '../components/BulkTransactionModal';
 import CustomerSearchModal from '../components/CustomerSearchModal';
@@ -31,6 +31,9 @@ function Products() {
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [imageModal, setImageModal] = useState(null); // product for image upload
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageInputRef = useRef(null);
   const itemsPerPage = 20;
 
   const fetchProducts = useCallback(async () => {
@@ -114,6 +117,36 @@ function Products() {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !imageModal) return;
+    setImageUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const { data } = await api.post(`/products/${imageModal.id}/image`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setProducts(prev => prev.map(p => p.id === data.id ? data : p));
+      setImageModal(data);
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Image upload failed');
+    } finally {
+      setImageUploading(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
+
+  const handleImageDelete = async (product) => {
+    try {
+      const { data } = await api.delete(`/products/${product.id}/image`);
+      setProducts(prev => prev.map(p => p.id === data.id ? data : p));
+      setImageModal(data);
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to remove image');
+    }
+  };
+
   const filtered = products.filter(p => {
     const matchSearch = !search || [p.name, p.article_no, p.category].some(
       v => String(v || '').toLowerCase().includes(search.toLowerCase())
@@ -130,10 +163,10 @@ function Products() {
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-xl font-black text-gray-900">Products Inventory</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
+          <h1 className="text-xl font-black text-gray-900 dark:text-white">Products Inventory</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5">
             {products.length} products
             {lowStockCount > 0 && (
               <span className="ml-2 inline-flex items-center space-x-1 text-amber-600 font-semibold">
@@ -174,10 +207,10 @@ function Products() {
       {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 dark:border-slate-800">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
                 <X size={18} />
               </button>
             </div>
@@ -260,19 +293,19 @@ function Products() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Search products..." className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+            <input type="text" placeholder="Search products..." className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
               value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
           </div>
           <div className="flex items-center space-x-2">
-            <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+            <select className="px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
               value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setCurrentPage(1); }}>
               {filterCategories.map(c => <option key={c} value={c}>{c === 'all' ? 'All Categories' : c}</option>)}
             </select>
-            <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+            <select className="px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
               value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
               <option value="all">All Status</option>
               <option value="Active">Active</option>
@@ -283,8 +316,9 @@ function Products() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50/80 border-b border-gray-100">
-              <tr className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            <thead className="bg-gray-50/80 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
+              <tr className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left">Img</th>
                 <th className="px-5 py-3 text-left">Product</th>
                 <th className="px-5 py-3 text-left">Category</th>
                 <th className="px-5 py-3 text-right">Purchase Price</th>
@@ -295,57 +329,63 @@ function Products() {
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
               {loading ? (
                 [...Array(5)].map((_, i) => (
-                  <tr key={i}><td colSpan="8" className="px-5 py-4"><div className="h-8 bg-gray-100 rounded-lg animate-pulse" /></td></tr>
+                  <tr key={i}><td colSpan="9" className="px-5 py-4"><div className="h-8 bg-gray-100 dark:bg-slate-800 rounded-lg animate-pulse" /></td></tr>
                 ))
               ) : paginated.length === 0 ? (
-                <tr><td colSpan="8" className="px-5 py-16 text-center">
+                <tr><td colSpan="9" className="px-5 py-16 text-center">
                   <Package size={40} className="mx-auto text-gray-300 mb-3" />
-                  <p className="text-gray-500 font-medium">No products found</p>
+                  <p className="text-gray-500 dark:text-slate-400 font-medium">No products found</p>
                 </td></tr>
               ) : (
                 paginated.map(p => {
                   const margin = p.sale_price - p.product_price;
                   const marginPct = p.product_price > 0 ? ((margin / p.product_price) * 100).toFixed(1) : 0;
                   return (
-                    <tr key={p.id} className="hover:bg-gray-50/60 transition-colors group">
+                    <tr key={p.id} className="hover:bg-gray-50/60 dark:hover:bg-slate-800/50 transition-colors group">
+                      <td className="px-5 py-3.5">
+                        <button onClick={() => setImageModal(p)} className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700 flex items-center justify-center bg-gray-50 dark:bg-slate-800 hover:border-indigo-400 transition-all" title="Manage image">
+                          {p.image_url ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" /> : <Image size={16} className="text-gray-300 dark:text-slate-600" />}
+                        </button>
+                      </td>
                       <td className="px-5 py-3.5">
                         <div>
-                          <p className="font-bold text-gray-900">{p.name}</p>
-                          <p className="text-xs text-gray-400 font-medium">{p.article_no}</p>
+                          <p className="font-bold text-gray-900 dark:text-white">{p.name}</p>
+                          <p className="text-xs text-gray-400 dark:text-slate-500 font-medium">{p.article_no}</p>
                         </div>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-lg text-xs font-semibold">
+                        <span className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold">
                           {p.category || 'Uncategorized'}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right font-mono text-gray-600 font-medium">Rs {Number(p.product_price || 0).toFixed(2)}</td>
-                      <td className="px-5 py-3.5 text-right font-mono font-bold text-gray-900">Rs {Number(p.sale_price || 0).toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-right font-mono text-gray-600 dark:text-slate-300 font-medium">Rs {Number(p.product_price || 0).toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-right font-mono font-bold text-gray-900 dark:text-white">Rs {Number(p.sale_price || 0).toFixed(2)}</td>
                       <td className="px-5 py-3.5 text-right">
-                        <span className={`text-xs font-bold px-2 py-1 rounded-lg ${margin > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-lg ${margin > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                           {margin >= 0 ? '+' : ''}{marginPct}%
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-center">
                         <span className={`inline-flex items-center justify-center px-2.5 py-1 text-xs font-black rounded-lg ${
-                          p.in_hand_qty > 10 ? 'bg-emerald-100 text-emerald-800'
-                          : p.in_hand_qty > 0 ? 'bg-amber-100 text-amber-800'
-                          : 'bg-red-100 text-red-800'
+                          p.in_hand_qty > 10 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          : p.in_hand_qty > 0 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                         }`}>{p.in_hand_qty}</span>
                       </td>
                       <td className="px-5 py-3.5 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${p.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${p.status === 'Active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400'}`}>
                           <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${p.status === 'Active' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
                           {p.status}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => openModal(p)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><Edit2 size={14} /></button>
-                          <button onClick={() => handleDelete(p.id, p.name)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={14} /></button>
+                          <button onClick={() => setImageModal(p)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all" title="Manage image"><ImagePlus size={14} /></button>
+                          <button onClick={() => openModal(p)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all" title="Edit"><Edit2 size={14} /></button>
+                          <button onClick={() => handleDelete(p.id, p.name)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title="Delete"><Trash2 size={14} /></button>
                         </div>
                       </td>
                     </tr>
@@ -356,17 +396,52 @@ function Products() {
           </table>
         </div>
 
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500 font-medium">
+        <div className="px-5 py-3 border-t border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 font-medium">
           <span>Showing {paginated.length} of {filtered.length} products</span>
           {totalPages > 1 && (
             <div className="flex items-center space-x-1">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Prev</button>
-              <span className="px-3 py-1.5 font-bold text-gray-700">{currentPage} / {totalPages}</span>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next</button>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Prev</button>
+              <span className="px-3 py-1.5 font-bold text-gray-700 dark:text-slate-300">{currentPage} / {totalPages}</span>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next</button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Image Upload Modal */}
+      {imageModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-slate-800">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Product Image</h2>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">{imageModal.name}</p>
+              </div>
+              <button onClick={() => setImageModal(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              {imageModal.image_url ? (
+                <div className="relative">
+                  <img src={imageModal.image_url} alt={imageModal.name} className="w-full h-48 object-contain rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800" />
+                  <button onClick={() => handleImageDelete(imageModal)} className="absolute top-2 right-2 w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center justify-center transition-all" title="Remove image"><X size={14} /></button>
+                </div>
+              ) : (
+                <div className="w-full h-48 rounded-xl border-2 border-dashed border-gray-200 dark:border-slate-700 flex flex-col items-center justify-center text-gray-400 dark:text-slate-500">
+                  <Image size={40} className="mb-2 opacity-40" />
+                  <p className="text-sm font-medium">No image uploaded</p>
+                </div>
+              )}
+              <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
+              <button onClick={() => imageInputRef.current?.click()} disabled={imageUploading}
+                className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all disabled:opacity-50">
+                {imageUploading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <ImagePlus size={16} />}
+                <span>{imageUploading ? 'Uploading…' : imageModal.image_url ? 'Replace Image' : 'Upload Image'}</span>
+              </button>
+              <p className="text-xs text-center text-gray-400 dark:text-slate-500">JPEG, PNG or WebP · Max 500 KB</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

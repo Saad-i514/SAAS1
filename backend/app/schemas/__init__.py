@@ -4,3 +4,5 @@ from .supplier import Supplier, SupplierCreate, SupplierUpdate, SupplierInDBBase
 from .product import Product, ProductCreate, ProductUpdate, ProductInDBBase
 from .transaction import Transaction, TransactionCreate, TransactionUpdate, TransactionInDBBase
 from .dynamic_column import DynamicColumn, DynamicColumnCreate, DynamicColumnInDBBase
+from .customer import Customer, CustomerCreate, CustomerUpdate, CustomerInDB, CustomerPayment
+from .audit_log import AuditLogEntry

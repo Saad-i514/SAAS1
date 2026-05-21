@@ -2,7 +2,7 @@ import asyncio
 import json
 import uuid
 from typing import Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -14,6 +14,92 @@ from app.utils import get_date_range
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _audit(db, user, action, resource_type, resource_id, description, request=None):
+    ip = None
+    if request:
+        forwarded = request.headers.get("X-Forwarded-For")
+        ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else None)
+    db.add(models.AuditLog(
+        company_id=user.company_id,
+        user_id=user.id,
+        user_email=user.email,
+        action=action,
+        resource_type=resource_type,
+        resource_id=str(resource_id),
+        description=description,
+        ip_address=ip,
+    ))
+
+
+def _update_customer_balance(
+    db: Session,
+    company_id: int,
+    customer_name: Optional[str],
+    customer_id: Optional[int],
+    tx_type: models.TransactionTypeEnum,
+    amount: float,
+) -> tuple[float, float]:
+    """
+    Update customer outstanding balance for credit transactions.
+    Returns (previous_credit, current_credit).
+    """
+    if not customer_name and not customer_id:
+        return 0.0, 0.0
+
+    customer = None
+    if customer_id:
+        customer = db.query(models.Customer).filter(
+            models.Customer.id == customer_id,
+            models.Customer.company_id == company_id,
+        ).first()
+    elif customer_name:
+        customer = db.query(models.Customer).filter(
+            models.Customer.company_id == company_id,
+            models.Customer.name.ilike(customer_name),
+        ).first()
+
+    if not customer:
+        return 0.0, 0.0
+
+    prev = round(customer.outstanding_balance or 0.0, 2)
+
+    if tx_type == models.TransactionTypeEnum.SALE:
+        customer.outstanding_balance = round(prev + amount, 2)
+        customer.total_purchased = round((customer.total_purchased or 0.0) + amount, 2)
+    elif tx_type in (models.TransactionTypeEnum.PAYMENT, models.TransactionTypeEnum.RETURN):
+        customer.outstanding_balance = round(max(0.0, prev - amount), 2)
+        if tx_type == models.TransactionTypeEnum.PAYMENT:
+            customer.total_paid = round((customer.total_paid or 0.0) + amount, 2)
+
+    return prev, round(customer.outstanding_balance, 2)
+
+
+def _update_supplier_balance(
+    db: Session,
+    company_id: int,
+    supplier_id: Optional[int],
+    tx_type: models.TransactionTypeEnum,
+    amount: float,
+):
+    """Update supplier outstanding balance for purchase/payment transactions."""
+    if not supplier_id:
+        return
+
+    supplier = db.query(models.Supplier).filter(
+        models.Supplier.id == supplier_id,
+        models.Supplier.company_id == company_id,
+    ).first()
+    if not supplier:
+        return
+
+    if tx_type == models.TransactionTypeEnum.PURCHASE:
+        supplier.outstanding_balance = round((supplier.outstanding_balance or 0.0) + amount, 2)
+        supplier.total_purchased = round((supplier.total_purchased or 0.0) + amount, 2)
+    elif tx_type == models.TransactionTypeEnum.PAYMENT:
+        supplier.outstanding_balance = round(max(0.0, (supplier.outstanding_balance or 0.0) - amount), 2)
+        supplier.total_paid = round((supplier.total_paid or 0.0) + amount, 2)
 
 # ── SSE event bus (in-memory, per-process) ──────────────────────────────────
 # For multi-computer real-time updates via Server-Sent Events
@@ -282,6 +368,7 @@ def create_transaction(
     *,
     db: Session = Depends(deps.get_db),
     transaction_in: schemas.transaction.TransactionCreate,
+    request: Request,
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     # Operators and Admins must have a company
@@ -325,14 +412,33 @@ def create_transaction(
             _apply_inventory(db, product, tx_type, qty, transaction_in.add_to_stock or False)
             db.add(product)
 
-    create_data = transaction_in.model_dump(exclude={"add_to_stock", "type", "debit"})
+    # Wire up customer credit ledger
+    prev_credit, curr_credit = _update_customer_balance(
+        db, company_id,
+        transaction_in.customer_name,
+        transaction_in.customer_id if hasattr(transaction_in, 'customer_id') else None,
+        tx_type, debit,
+    )
+
+    # Wire up supplier balance
+    _update_supplier_balance(db, company_id, transaction_in.supplier_id, tx_type, debit)
+
+    create_data = transaction_in.model_dump(exclude={"add_to_stock", "type", "debit", "previous_credit", "current_credit"})
     transaction = models.Transaction(
         **create_data,
         type=tx_type,
         debit=debit,
+        previous_credit=prev_credit,
+        current_credit=curr_credit,
         company_id=current_user.company_id,
     )
     db.add(transaction)
+    db.flush()
+
+    _audit(db, current_user, "CREATE", "transaction", transaction.id,
+           f"{tx_type.value.upper()} — {transaction_in.product_name or 'payment'} "
+           f"qty={qty} amount=Rs{debit:.2f} customer={transaction_in.customer_name or '-'}",
+           request)
 
     try:
         db.commit()
@@ -392,6 +498,7 @@ def create_bulk_order(
     *,
     db: Session = Depends(deps.get_db),
     order_in: schemas.transaction.BulkOrderCreate,
+    request: Request,
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -491,6 +598,31 @@ def create_bulk_order(
         logger.error(f"Bulk order creation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to record bulk order")
 
+    # Wire up customer credit ledger for the whole order total
+    if order_in.customer_name or getattr(order_in, 'customer_id', None):
+        _update_customer_balance(
+            db, company_id,
+            order_in.customer_name,
+            getattr(order_in, 'customer_id', None),
+            tx_type, round(total_amount, 2),
+        )
+
+    # Wire up supplier balance
+    _update_supplier_balance(db, company_id, order_in.supplier_id, tx_type, round(total_amount, 2))
+
+    _audit(db, current_user, "CREATE", "transaction", order_no,
+           f"Bulk {tx_type.value.upper()} order {order_no} — {len(created_transactions)} items, "
+           f"total=Rs{total_amount:.2f} customer={order_in.customer_name or '-'}",
+           request)
+
+    try:
+        db.commit()
+        for tx in created_transactions:
+            db.refresh(tx)
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Bulk order post-commit failed: {e}")
+
     # Broadcast SSE
     _broadcast(company_id, {
         "type": "bulk_order_created",
@@ -549,6 +681,7 @@ def create_bulk_order(
 def delete_transaction(
     transaction_id: int,
     db: Session = Depends(deps.get_db),
+    request: Request = None,
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     if current_user.role not in [models.RoleEnum.ADMIN, models.RoleEnum.SUPER_ADMIN]:
@@ -561,6 +694,11 @@ def delete_transaction(
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
+    _audit(db, current_user, "DELETE", "transaction", transaction_id,
+           f"Deleted {transaction.type.value if transaction.type else '?'} transaction "
+           f"#{transaction_id} — {transaction.product_name or 'payment'} "
+           f"Rs{transaction.debit:.2f}",
+           request)
     db.delete(transaction)
     db.commit()
     return {"ok": True}

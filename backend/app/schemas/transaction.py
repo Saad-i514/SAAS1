@@ -45,6 +45,7 @@ class TransactionBase(BaseModel):
 
 class TransactionCreate(TransactionBase):
     supplier_id: Optional[int] = None
+    customer_id: Optional[int] = None
     date: Optional[datetime] = None
     add_to_stock: Optional[bool] = False
 
@@ -55,6 +56,7 @@ class TransactionInDBBase(TransactionBase):
     id: int
     company_id: int
     supplier_id: Optional[int] = None
+    customer_id: Optional[int] = None
     date: datetime
 
     class Config:
@@ -92,6 +94,7 @@ class BulkOrderCreate(BaseModel):
     order_no: Optional[str] = None
     date: Optional[datetime] = None
     supplier_id: Optional[int] = None
+    customer_id: Optional[int] = None
     customer_name: Optional[str] = None
     payment_term: Optional[str] = "Cash"
     add_to_stock: Optional[bool] = False

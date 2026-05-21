@@ -51,6 +51,7 @@ class SupplierUpdate(BaseModel):
     email: Optional[str] = Field(None, max_length=100)
     phone: Optional[str] = Field(None, max_length=20)
     status: Optional[str] = Field(None, max_length=20)
+    payment_due_date: Optional[datetime] = None
     dynamic_data: Optional[dict] = None
 
     @field_validator("name", mode="before")
@@ -86,6 +87,10 @@ class SupplierUpdate(BaseModel):
 class SupplierInDBBase(SupplierBase):
     id: int
     company_id: int
+    outstanding_balance: float = 0.0
+    total_purchased: float = 0.0
+    total_paid: float = 0.0
+    payment_due_date: Optional[datetime] = None
     created_at: datetime
 
     class Config:
@@ -94,3 +99,9 @@ class SupplierInDBBase(SupplierBase):
 
 class Supplier(SupplierInDBBase):
     pass
+
+
+class SupplierPayment(BaseModel):
+    """Record a payment made to a supplier."""
+    amount: float = Field(..., gt=0)
+    notes: Optional[str] = None
