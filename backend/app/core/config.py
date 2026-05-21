@@ -7,8 +7,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 def _get_secret_key() -> str:
     key = os.getenv("SECRET_KEY", "")
     if not key:
-        # PRODUCTION WARNING: Set SECRET_KEY in Vercel environment variables
-        # For now, generate a temporary key to avoid breaking deployment
         import logging
         logging.warning(
             "⚠️ SECRET_KEY not set! Using temporary key. "
@@ -24,7 +22,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = _get_secret_key()
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8  # 8 hours (reduced from 24)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8  # 8 hours
 
     # Database connection string
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:51900@localhost:5432/SAAS_PROD")
@@ -34,6 +32,12 @@ class Settings(BaseSettings):
         "BACKEND_CORS_ORIGINS",
         "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://localhost:3000"
     )
+
+    # ── AI Agent API Keys ────────────────────────────────────────────────────
+    # Ollama cloud — gpt-oss:120b via OpenAI-compatible /v1 endpoint
+    OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", "")
+    # Mistral — pixtral-12b-2409 vision model for image scanning
+    MISTRAL_API_KEY: str = os.getenv("MISTRAL_API_KEY", "")
 
     model_config = SettingsConfigDict(env_file=".env")
 
