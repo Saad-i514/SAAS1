@@ -35,9 +35,9 @@ class Settings(BaseSettings):
 
     # ── AI Agent API Keys ────────────────────────────────────────────────────
     # Ollama cloud — gpt-oss:120b via OpenAI-compatible /v1 endpoint
-    OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", "")
+    OLLAMA_API_KEY: str = ""
     # Mistral — pixtral-12b-2409 vision model for image scanning
-    MISTRAL_API_KEY: str = os.getenv("MISTRAL_API_KEY", "")
+    MISTRAL_API_KEY: str = ""
 
     model_config = SettingsConfigDict(env_file=".env")
 
