@@ -223,8 +223,8 @@ def get_dashboard_charts(
         # Build the exact 12-month sequence expected by the frontend
         monthly_sales = []
         for i in range(11, -1, -1):
-            target_month = now.month - i
-            target_year = now.year
+            target_month = now_local.month - i
+            target_year = now_local.year
             while target_month <= 0:
                 target_month += 12
                 target_year -= 1
