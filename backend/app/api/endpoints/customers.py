@@ -42,6 +42,91 @@ def _audit(
     db.add(log)
 
 
+# ── Import customers from existing transactions ───────────────────────────────
+
+@router.post("/import-from-transactions")
+def import_customers_from_transactions(
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Safe, read-only import: scans all existing transaction customer_name values
+    and creates Customer records for any that don't already exist.
+    Existing customers and ALL transaction data are never modified.
+    """
+    if current_user.role not in [models.RoleEnum.ADMIN, models.RoleEnum.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can import customers")
+
+    company_id = current_user.company_id
+    if company_id is None:
+        raise HTTPException(status_code=400, detail="No company associated with this account")
+
+    # Get all distinct non-empty customer names from transactions
+    rows = (
+        db.query(models.Transaction.customer_name)
+        .filter(
+            models.Transaction.company_id == company_id,
+            models.Transaction.customer_name.isnot(None),
+            models.Transaction.customer_name != "",
+        )
+        .distinct()
+        .all()
+    )
+
+    names = [r[0].strip() for r in rows if r[0] and r[0].strip()]
+
+    # Get names that already exist in customers table (case-insensitive)
+    existing = db.query(models.Customer.name).filter(
+        models.Customer.company_id == company_id
+    ).all()
+    existing_lower = {e[0].lower() for e in existing}
+
+    created = []
+    skipped = []
+
+    for name in names:
+        if name.lower() in existing_lower:
+            skipped.append(name)
+            continue
+
+        # Calculate totals from existing transactions (read-only)
+        total_purchased = db.query(func.sum(models.Transaction.debit)).filter(
+            models.Transaction.company_id == company_id,
+            models.Transaction.customer_name.ilike(name),
+            models.Transaction.type == models.TransactionTypeEnum.SALE,
+        ).scalar() or 0.0
+
+        total_paid = db.query(func.sum(models.Transaction.debit)).filter(
+            models.Transaction.company_id == company_id,
+            models.Transaction.customer_name.ilike(name),
+            models.Transaction.type == models.TransactionTypeEnum.PAYMENT,
+        ).scalar() or 0.0
+
+        outstanding = max(0.0, round(total_purchased - total_paid, 2))
+
+        customer = models.Customer(
+            company_id=company_id,
+            name=name,
+            status="Active",
+            total_purchased=round(total_purchased, 2),
+            total_paid=round(total_paid, 2),
+            outstanding_balance=outstanding,
+        )
+        db.add(customer)
+        existing_lower.add(name.lower())
+        created.append(name)
+
+    db.commit()
+
+    return {
+        "ok": True,
+        "created": len(created),
+        "skipped": len(skipped),
+        "created_names": created,
+        "message": f"Imported {len(created)} customers from transaction history. {len(skipped)} already existed.",
+    }
+
+
 # ── List ──────────────────────────────────────────────────────────────────────
 
 @router.get("/", response_model=List[schemas.Customer])

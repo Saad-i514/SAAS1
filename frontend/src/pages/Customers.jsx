@@ -3,7 +3,7 @@ import api from '../services/api';
 import {
   UserCircle, Plus, Search, X, Edit2, Trash2, CreditCard,
   Phone, Mail, MapPin, TrendingUp, AlertTriangle, ChevronDown,
-  ChevronUp, DollarSign, History, CheckCircle,
+  ChevronUp, DollarSign, History, CheckCircle, Download,
 } from 'lucide-react';
 
 const EMPTY_FORM = {
@@ -231,10 +231,12 @@ export default function Customers() {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState(null); // null | {type:'add'|'edit'|'pay'|'ledger', customer?}
+  const [modal, setModal] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [sortField, setSortField] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -251,6 +253,24 @@ export default function Customers() {
   const handleDelete = async (id) => {
     try { await api.delete(`/customers/${id}`); load(); } catch (e) { alert(e.response?.data?.detail || 'Delete failed'); }
     setDeleteId(null);
+  };
+
+  const handleImport = async () => {
+    if (!window.confirm(
+      'This will scan all your existing transactions and create Customer records for every unique customer name found.\n\n' +
+      'No existing data will be modified or deleted. Safe to run.\n\nProceed?'
+    )) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const { data } = await api.post('/customers/import-from-transactions');
+      setImportResult(data);
+      load(); // refresh list
+    } catch (e) {
+      alert(e.response?.data?.detail || 'Import failed');
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleSort = (f) => { if (sortField === f) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortField(f); setSortDir('asc'); } };
@@ -275,11 +295,38 @@ export default function Customers() {
           <h1 className="text-2xl font-black text-gray-900 dark:text-white">Customers</h1>
           <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Manage customer accounts, credit limits & ledger</p>
         </div>
-        <button onClick={() => setModal({ type: 'add' })}
-          className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm">
-          <Plus size={16} /><span>Add Customer</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={handleImport} disabled={importing}
+            className="flex items-center space-x-2 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all border border-emerald-200 dark:border-emerald-800 disabled:opacity-50">
+            {importing
+              ? <div className="w-4 h-4 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin" />
+              : <Download size={16} />}
+            <span>{importing ? 'Importing…' : 'Import from Transactions'}</span>
+          </button>
+          <button onClick={() => setModal({ type: 'add' })}
+            className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm">
+            <Plus size={16} /><span>Add Customer</span>
+          </button>
+        </div>
       </div>
+
+      {/* Import result banner */}
+      {importResult && (
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-4 flex items-start justify-between gap-3">
+          <div className="flex items-start space-x-3">
+            <CheckCircle size={18} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">{importResult.message}</p>
+              {importResult.created_names?.length > 0 && (
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                  Added: {importResult.created_names.slice(0, 8).join(', ')}{importResult.created_names.length > 8 ? ` +${importResult.created_names.length - 8} more` : ''}
+                </p>
+              )}
+            </div>
+          </div>
+          <button onClick={() => setImportResult(null)} className="text-emerald-500 hover:text-emerald-700 flex-shrink-0"><X size={16} /></button>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
