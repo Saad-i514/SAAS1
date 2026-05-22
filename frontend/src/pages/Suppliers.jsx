@@ -8,6 +8,13 @@ import {
 import BulkTransactionModal from '../components/BulkTransactionModal';
 import { fmtDateShort } from '../services/dateUtils';
 
+const parseDateOnly = (value) => {
+  if (!value) return null;
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
+
 // ── Supplier History Modal ────────────────────────────────────────────────────
 function SupplierHistoryModal({ supplier, onClose }) {
   const [data, setData] = useState(null);
@@ -319,8 +326,10 @@ export default function Suppliers() {
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated  = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
   const totalOutstanding = suppliers.reduce((s, sup) => s + (sup.outstanding_balance || 0), 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const overdueCount = suppliers.filter(s =>
-    s.payment_due_date && new Date(s.payment_due_date) < new Date() && (s.outstanding_balance || 0) > 0
+    parseDateOnly(s.payment_due_date) && parseDateOnly(s.payment_due_date) < today && (s.outstanding_balance || 0) > 0
   ).length;
 
   return (
@@ -470,7 +479,8 @@ export default function Suppliers() {
                   </div>
                 </td></tr>
               ) : paginated.map(s => {
-                const isOverdue = s.payment_due_date && new Date(s.payment_due_date) < new Date() && (s.outstanding_balance || 0) > 0;
+                const dueDate = parseDateOnly(s.payment_due_date);
+                const isOverdue = dueDate && dueDate < today && (s.outstanding_balance || 0) > 0;
                 return (
                   <tr key={s.id} className="group">
                     <td>

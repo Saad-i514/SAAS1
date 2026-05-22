@@ -15,6 +15,14 @@ const TIMEFRAMES = [
   { key: 'yearly',  label: '1 Year' },
 ];
 
+const localDateStamp = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function Reports() {
   const [timeframe, setTimeframe]   = useState('monthly');
   const [reportData, setReportData] = useState(null);
@@ -64,7 +72,7 @@ export default function Reports() {
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${type}_report_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `${type}_report_${localDateStamp()}.csv`;
       document.body.appendChild(a); a.click(); a.remove();
       window.URL.revokeObjectURL(url);
     } catch { alert('Failed to download CSV'); }
@@ -103,7 +111,7 @@ export default function Reports() {
       const y = doc.lastAutoTable.finalY + 10;
       doc.setFontSize(8); doc.setTextColor(79,70,229); doc.text('Summary: ', 14, y+5);
       doc.setTextColor(60); doc.text(summary, 40, y+5);
-      doc.save(`${type}_report_${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`${type}_report_${localDateStamp()}.pdf`);
     } catch (err) { console.error(err); alert('Failed to generate PDF'); }
   };
 

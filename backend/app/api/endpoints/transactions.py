@@ -11,7 +11,7 @@ from app.api import deps
 from app.core import cache
 from app.utils import utc_date_to_local, get_date_range
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -220,6 +220,32 @@ def _apply_inventory(
             product.in_hand_qty += quantity
 
 
+def _normalize_transaction_date(tx_date: Optional[datetime], tz_offset_hours: int) -> datetime:
+    """
+    Store selected calendar dates as naive UTC datetimes.
+
+    The React date input sends YYYY-MM-DD, which Pydantic parses as a naive
+    midnight datetime. That value represents the user's local calendar day, not
+    UTC midnight, so convert it before saving. Also reject accidental future
+    dates; this would have blocked May 23 being saved while entering May 22 data.
+    """
+    tz = timezone(timedelta(hours=tz_offset_hours))
+
+    if tx_date is None:
+        return datetime.utcnow()
+
+    if tx_date.tzinfo is None:
+        local_dt = tx_date.replace(tzinfo=tz)
+    else:
+        local_dt = tx_date.astimezone(tz)
+
+    now_local = datetime.now(tz)
+    if local_dt.date() > now_local.date():
+        raise HTTPException(status_code=400, detail="Transaction date cannot be in the future")
+
+    return local_dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 # ── List / filter ─────────────────────────────────────────────────────────────
 
 @router.get("/", response_model=List[schemas.transaction.Transaction])
@@ -334,7 +360,7 @@ def get_transactions_by_customer(
 
         items.append({
             "id": tx.id,
-            "date": utc_date_to_local(tx.date) if tx.date else None,
+            "date": utc_date_to_local(tx.date, tz_offset) if tx.date else None,
             "type": tx.type.value if tx.type else None,
             "order_no": tx.order_no,
             "product_name": tx.product_name,
@@ -370,6 +396,7 @@ def create_transaction(
     db: Session = Depends(deps.get_db),
     transaction_in: schemas.transaction.TransactionCreate,
     request: Request,
+    tz_offset: int = Query(5, description="Client UTC offset in hours"),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     # Operators and Admins must have a company
@@ -424,10 +451,11 @@ def create_transaction(
     # Wire up supplier balance
     _update_supplier_balance(db, company_id, transaction_in.supplier_id, tx_type, debit)
 
-    create_data = transaction_in.model_dump(exclude={"add_to_stock", "type", "debit", "previous_credit", "current_credit"})
+    create_data = transaction_in.model_dump(exclude={"add_to_stock", "type", "debit", "previous_credit", "current_credit", "date"})
     transaction = models.Transaction(
         **create_data,
         type=tx_type,
+        date=_normalize_transaction_date(transaction_in.date, tz_offset),
         debit=debit,
         previous_credit=prev_credit,
         current_credit=curr_credit,
@@ -506,6 +534,7 @@ def create_bulk_order(
     db: Session = Depends(deps.get_db),
     order_in: schemas.transaction.BulkOrderCreate,
     request: Request,
+    tz_offset: int = Query(5, description="Client UTC offset in hours"),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -519,7 +548,7 @@ def create_bulk_order(
 
     tx_type = _resolve_tx_type(order_in.type)
     order_no = order_in.order_no or f"ORD-{uuid.uuid4().hex[:8].upper()}"
-    tx_date = order_in.date or datetime.utcnow()
+    tx_date = _normalize_transaction_date(order_in.date, tz_offset)
     company_id = current_user.company_id
 
     created_transactions: list[models.Transaction] = []

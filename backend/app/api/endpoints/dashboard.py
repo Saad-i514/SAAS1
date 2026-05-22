@@ -6,7 +6,7 @@ from app import models
 from app.api import deps
 from app.core import cache
 from app.utils import utc_date_to_local
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -163,6 +163,7 @@ def get_dashboard_summary(
 
 @router.get("/charts")
 def get_dashboard_charts(
+    tz_offset: int = Query(5, description="Client UTC offset in hours"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -176,20 +177,23 @@ def get_dashboard_charts(
             }
 
         # ── Cache check (5 min TTL — charts change slowly) ──────────────────
-        cache_key, cached_val = cache.cached(company_id, 300, "dashboard_charts")
+        cache_key, cached_val = cache.cached(company_id, 300, "dashboard_charts", tz_offset)
         if cached_val is not None:
             return cached_val
 
-        now = datetime.utcnow()
+        tz = timezone(timedelta(hours=tz_offset))
+        now_local = datetime.now(tz)
+
         # Ensure we start exactly from the beginning of the month, 11 months ago
-        # (meaning 12 months total including the current month)
-        start_month = now.month - 11
-        start_year = now.year
+        # (meaning 12 months total including the current month) in local time.
+        start_month = now_local.month - 11
+        start_year = now_local.year
         while start_month <= 0:
             start_month += 12
             start_year -= 1
 
-        m_start_threshold = datetime(start_year, start_month, 1)
+        local_start = datetime(start_year, start_month, 1, tzinfo=tz)
+        m_start_threshold = local_start.astimezone(timezone.utc).replace(tzinfo=None)
 
         # Execute ONE aggregated query grouped by year, month, and transaction type
         grouped_data = db.query(
@@ -253,7 +257,7 @@ def get_dashboard_charts(
             sales_distribution = [{"name": "No Products", "value": 1}]
 
         # ── top 5 products by qty sold (last 30 days) ────────────────────────
-        thirty_ago = now - timedelta(days=30)
+        thirty_ago = (now_local - timedelta(days=30)).astimezone(timezone.utc).replace(tzinfo=None)
         top_products = db.query(
             models.Transaction.product_name,
             func.sum(models.Transaction.quantity).label("total_qty"),
@@ -291,6 +295,7 @@ def get_dashboard_charts(
 @router.get("/recent-transactions")
 def get_recent_transactions(
     limit: int = Query(10, ge=1, le=50),
+    tz_offset: int = Query(5, description="Client UTC offset in hours"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -313,7 +318,7 @@ def get_recent_transactions(
             "quantity": t.quantity,
             "debit": t.debit,
             "customer_name": t.customer_name,
-            "date": utc_date_to_local(t.date) if t.date else None,
+            "date": utc_date_to_local(t.date, tz_offset) if t.date else None,
             "order_no": t.order_no,
         }
         for t in transactions

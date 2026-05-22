@@ -254,6 +254,7 @@ def customer_ledger(
     db: Session = Depends(deps.get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(200, ge=1, le=500),
+    tz_offset: int = Query(5, description="Client UTC offset in hours"),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     customer = db.query(models.Customer).filter(
@@ -287,7 +288,7 @@ def customer_ledger(
             running_balance -= amount
         items.append({
             "id": tx.id,
-            "date": utc_date_to_local(tx.date) if tx.date else None,
+            "date": utc_date_to_local(tx.date, tz_offset) if tx.date else None,
             "type": tx.type.value if tx.type else None,
             "order_no": tx.order_no,
             "product_name": tx.product_name,

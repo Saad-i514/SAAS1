@@ -11,8 +11,8 @@ from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
 
-# PKT timezone offset (UTC+5) — used as default for all date calculations
-_TZ_OFFSET = 5
+# PKT timezone offset (UTC+5) — default when no client offset is supplied
+DEFAULT_TZ_OFFSET = 5
 
 
 from app.utils import utc_date_to_local
@@ -117,7 +117,7 @@ def _run_summary(db, company_id: int, start_utc, end_utc=None) -> dict:
 # ---------------------------------------------------------------------------
 
 @tool
-def get_dashboard_summary(company_id: int, timeframe: str = "monthly") -> dict:
+def get_dashboard_summary(company_id: int, timeframe: str = "monthly", tz_offset: int = DEFAULT_TZ_OFFSET) -> dict:
     """
     Get business KPI summary including sales, profit, loss, cost, returns,
     purchases, product count, supplier count, and low-stock count.
@@ -140,7 +140,7 @@ def get_dashboard_summary(company_id: int, timeframe: str = "monthly") -> dict:
 
         db = SessionLocal()
         try:
-            tz = timezone(timedelta(hours=_TZ_OFFSET))
+            tz = timezone(timedelta(hours=tz_offset))
             now_local = datetime.now(tz)
 
             if timeframe == "yesterday":
@@ -155,7 +155,7 @@ def get_dashboard_summary(company_id: int, timeframe: str = "monthly") -> dict:
                 end_utc   = local_today_start.astimezone(timezone.utc).replace(tzinfo=None)
                 date_label = (now_local - timedelta(days=1)).strftime("%Y-%m-%d")
             else:
-                start_utc = get_date_range(timeframe, _TZ_OFFSET)
+                start_utc = get_date_range(timeframe, tz_offset)
                 end_utc   = None
                 date_label = timeframe
 
@@ -176,7 +176,7 @@ def get_dashboard_summary(company_id: int, timeframe: str = "monthly") -> dict:
 # ---------------------------------------------------------------------------
 
 @tool
-def get_summary_by_date(company_id: int, date: str) -> dict:
+def get_summary_by_date(company_id: int, date: str, tz_offset: int = DEFAULT_TZ_OFFSET) -> dict:
     """
     Get full KPI summary for a specific calendar date (YYYY-MM-DD format).
     Use this when the user asks about a specific date like "May 20", "2026-05-20",
@@ -191,7 +191,7 @@ def get_summary_by_date(company_id: int, date: str) -> dict:
 
         db = SessionLocal()
         try:
-            start_utc, end_utc = get_end_of_day_utc(date, _TZ_OFFSET)
+            start_utc, end_utc = get_end_of_day_utc(date, tz_offset)
             result = _run_summary(db, company_id, start_utc, end_utc)
             result["date"] = date
             return result
@@ -294,6 +294,7 @@ def get_recent_transactions(
     company_id: int,
     limit: int = 10,
     transaction_type: Optional[str] = None,
+    tz_offset: int = DEFAULT_TZ_OFFSET,
 ) -> list:
     """
     Get recent transactions for the company (most recent first).
@@ -327,7 +328,7 @@ def get_recent_transactions(
                     "quantity": t.quantity,
                     "amount": t.debit,
                     "customer_name": t.customer_name,
-                    "date": utc_date_to_local(t.date) if t.date else None,
+                    "date": utc_date_to_local(t.date, tz_offset) if t.date else None,
                     "order_no": t.order_no,
                 }
                 for t in transactions
@@ -344,7 +345,7 @@ def get_recent_transactions(
 # ---------------------------------------------------------------------------
 
 @tool
-def search_customer_transactions(company_id: int, customer_name: str) -> dict:
+def search_customer_transactions(company_id: int, customer_name: str, tz_offset: int = DEFAULT_TZ_OFFSET) -> dict:
     """
     Search all transactions for a specific customer/shop name (partial match).
     Returns transaction list, product summary, total amount, and total quantity.
@@ -369,7 +370,7 @@ def search_customer_transactions(company_id: int, customer_name: str) -> dict:
                 amount = round(tx.debit or 0, 2)
                 total_amount += amount
                 items.append({
-                    "date": utc_date_to_local(tx.date) if tx.date else None,
+                    "date": utc_date_to_local(tx.date, tz_offset) if tx.date else None,
                     "type": tx.type.value if tx.type else None,
                     "product_name": tx.product_name,
                     "quantity": qty,
@@ -403,7 +404,7 @@ def search_customer_transactions(company_id: int, customer_name: str) -> dict:
 # ---------------------------------------------------------------------------
 
 @tool
-def get_top_products(company_id: int, days: int = 30) -> list:
+def get_top_products(company_id: int, days: int = 30, tz_offset: int = DEFAULT_TZ_OFFSET) -> list:
     """
     Get top 10 best-selling products by quantity in the last N days.
     Returns product_name, total_qty_sold, total_revenue.
