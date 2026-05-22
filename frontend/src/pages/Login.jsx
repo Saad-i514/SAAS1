@@ -149,12 +149,9 @@ function Login() {
       </div>
 
       {/* ── Right Panel ────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-16 bg-white dark:bg-slate-900 relative">
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-16 bg-white">
 
-        {/* Subtle top-right decoration */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-60 pointer-events-none" />
-
-        <div className="w-full max-w-sm relative z-10">
+        <div className="w-full max-w-sm">
 
           {/* Mobile logo */}
           <div className="flex items-center space-x-3 mb-10 lg:hidden">
@@ -167,7 +164,7 @@ function Login() {
           {/* Heading */}
           <div className="mb-8">
             <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-2">Welcome back</h2>
-            <p className="text-gray-400 text-sm">Sign in to your account to continue</p>
+            <p className="text-gray-500 text-sm">Sign in to your account to continue</p>
           </div>
 
           {/* Error */}
