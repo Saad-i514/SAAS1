@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../services/api';
 import { X, Search, Package, ShoppingBag, Loader2 } from 'lucide-react';
+import { fmtDateShort } from '../services/dateUtils';
 
 const txTypeColor = {
   sale:     'bg-emerald-100 text-emerald-700',
@@ -151,7 +152,7 @@ function CustomerSearchModal({ isOpen, onClose }) {
                         {data.items.map((item, i) => (
                           <tr key={i} className="hover:bg-gray-50/60 transition-colors">
                             <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                              {item.date ? new Date(item.date).toLocaleDateString() : '-'}
+                              {item.date ? fmtDateShort(item.date) : '-'}
                             </td>
                             <td className="px-4 py-3">
                               <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${txTypeColor[item.type] || 'bg-gray-100 text-gray-700'}`}>

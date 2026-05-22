@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Search, Printer, Package } from 'lucide-react';
 import api from '../services/api';
+import { fmtDateShort } from '../services/dateUtils';
 
 function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
   const [customerName, setCustomerName] = useState('');
@@ -113,7 +114,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
 
       const rows = items.map(item => `
         <tr>
-          <td>${item.date ? new Date(item.date).toLocaleDateString() : '-'}</td>
+          <td>${item.date ? fmtDateShort(item.date) : '-'}</td>
           <td>${item.customer_name || '-'}</td>
           <td>${item.product_name || '-'}</td>
           <td>${item.category || '-'}</td>
@@ -207,7 +208,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
     // Customer-specific report
     const rows = items.map(item => `
       <tr>
-        <td>${item.date ? new Date(item.date).toLocaleDateString() : '-'}</td>
+        <td>${item.date ? fmtDateShort(item.date) : '-'}</td>
         <td>${item.type?.toUpperCase() || '-'}</td>
         <td>${item.product_name || '-'}</td>
         <td>${item.category || '-'}</td>
@@ -548,7 +549,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
                   <tbody className="divide-y divide-gray-100">
                     {reportData.items.map((item, i) => (
                       <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-gray-600">{item.date ? new Date(item.date).toLocaleDateString() : '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{item.date ? fmtDateShort(item.date) : '-'}</td>
                         {reportType === 'business' && (
                           <td className="px-4 py-3 text-gray-600">{item.customer_name || '-'}</td>
                         )}

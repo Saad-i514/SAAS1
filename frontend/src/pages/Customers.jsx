@@ -5,6 +5,7 @@ import {
   AlertTriangle, ChevronDown, ChevronUp, DollarSign,
   History, CheckCircle, Download,
 } from 'lucide-react';
+import { fmtDateShort } from '../services/dateUtils';
 
 const EMPTY_FORM = { name: '', phone: '', email: '', address: '', credit_limit: 0, status: 'Active', notes: '' };
 
@@ -197,7 +198,7 @@ function LedgerModal({ customer, onClose }) {
                       {ledger.transactions.map((tx, i) => (
                         <tr key={i}>
                           <td className="text-gray-500 dark:text-slate-400 whitespace-nowrap tabular">
-                            {tx.date ? new Date(tx.date).toLocaleDateString() : '—'}
+                            {tx.date ? fmtDateShort(tx.date) : '—'}
                           </td>
                           <td><span className={`badge ${txBadge[tx.type] || 'badge-gray'}`}>{tx.type?.toUpperCase()}</span></td>
                           <td className="font-medium text-gray-900 dark:text-white">{tx.product_name || '—'}</td>

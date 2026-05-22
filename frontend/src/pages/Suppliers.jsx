@@ -6,6 +6,7 @@ import {
   DollarSign, TrendingDown, Calendar, Edit2, RefreshCw,
 } from 'lucide-react';
 import BulkTransactionModal from '../components/BulkTransactionModal';
+import { fmtDateShort } from '../services/dateUtils';
 
 // ── Supplier History Modal ────────────────────────────────────────────────────
 function SupplierHistoryModal({ supplier, onClose }) {
@@ -112,7 +113,7 @@ function SupplierHistoryModal({ supplier, onClose }) {
                   ) : filteredItems.map((item, i) => (
                     <tr key={i}>
                       <td className="text-gray-500 dark:text-slate-400 whitespace-nowrap tabular">
-                        {item.date ? new Date(item.date).toLocaleDateString() : '—'}
+                        {item.date ? fmtDateShort(item.date) : '—'}
                       </td>
                       <td><span className={`badge ${txBadge[item.type] || 'badge-gray'}`}>{item.type?.toUpperCase()}</span></td>
                       <td className="font-medium text-gray-900 dark:text-white max-w-[160px] truncate">{item.product_name || '—'}</td>
@@ -499,7 +500,7 @@ export default function Suppliers() {
                     <td>
                       {s.payment_due_date
                         ? <span className={`text-xs font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-slate-300'}`}>
-                            {isOverdue ? '⚠ ' : ''}{new Date(s.payment_due_date).toLocaleDateString()}
+                            {isOverdue ? '⚠ ' : ''}{fmtDateShort(s.payment_due_date)}
                           </span>
                         : <span className="text-gray-300 dark:text-slate-600">—</span>
                       }

@@ -5,6 +5,7 @@ import {
   Download, RefreshCw, TrendingUp, ShoppingCart,
   RotateCcw, CreditCard, Package, ArrowLeftRight,
 } from 'lucide-react';
+import { fmtDateShort } from '../services/dateUtils';
 
 const TX_TYPES = ['all', 'sale', 'purchase', 'return', 'reverse', 'payment'];
 const TIMEFRAMES = [
@@ -89,7 +90,7 @@ export default function Transactions() {
   const exportCSV = () => {
     const rows = [['Date','Type','Order No','Product','Customer','Qty','Unit Price','Discount','Amount','Payment']];
     sorted.forEach(tx => rows.push([
-      tx.date ? new Date(tx.date).toLocaleDateString() : '',
+      tx.date ? fmtDateShort(tx.date) : '',
       tx.type, tx.order_no || '', tx.product_name || '', tx.customer_name || '',
       tx.quantity || 0, tx.unit_price || 0, tx.discount || 0, tx.debit || 0, tx.payment_term || '',
     ]));
@@ -247,7 +248,7 @@ export default function Transactions() {
                     return (
                       <tr key={tx.id} className="group">
                         <td className="text-gray-500 dark:text-slate-400 tabular whitespace-nowrap">
-                          {tx.date ? new Date(tx.date).toLocaleDateString() : '—'}
+                          {tx.date ? fmtDateShort(tx.date) : '—'}
                         </td>
                         <td>
                           <span className={`badge ${TYPE_BADGE[tx.type] || 'badge-gray'} gap-1`}>

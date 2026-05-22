@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import api from '../services/api';
 import { useRealtimeUpdates } from '../services/useRealtimeUpdates';
+import { fmtDateShort } from '../services/dateUtils';
 import {
   TrendingUp, TrendingDown, ShoppingCart, RotateCcw,
   AlertTriangle, RefreshCw, Package, Users, Activity,
@@ -479,7 +480,7 @@ export default function Dashboard() {
                       {tx.product_name || tx.customer_name || 'Transaction'}
                     </p>
                     <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
-                      {tx.date ? new Date(tx.date).toLocaleDateString() : ''}
+                      {tx.date ? fmtDateShort(tx.date) : ''}
                       {tx.customer_name && tx.product_name ? ` · ${tx.customer_name}` : ''}
                     </p>
                   </div>

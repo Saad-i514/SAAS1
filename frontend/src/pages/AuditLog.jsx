@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { ShieldCheck, Search, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { fmtDateShort } from '../services/dateUtils';
 
 const ACTION_BADGE = {
   CREATE:  'badge-green',
@@ -131,7 +132,7 @@ export default function AuditLog() {
                     <tr key={log.id}>
                       <td className="whitespace-nowrap">
                         <p className="text-xs text-gray-600 dark:text-slate-300 tabular">
-                          {log.created_at ? new Date(log.created_at).toLocaleDateString() : '—'}
+                          {log.created_at ? fmtDateShort(log.created_at) : '—'}
                         </p>
                         <p className="text-xs text-gray-400 dark:text-slate-500 tabular">
                           {log.created_at ? new Date(log.created_at).toLocaleTimeString() : ''}
