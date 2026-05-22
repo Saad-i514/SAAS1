@@ -96,6 +96,7 @@ function Dashboard() {
   const [charts, setCharts] = useState(null);
   const [recentTx, setRecentTx] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [timeframe, setTimeframe] = useState('monthly');
   const [lastUpdated, setLastUpdated] = useState(null);
   const [liveEvent, setLiveEvent] = useState(null);
@@ -104,6 +105,7 @@ function Dashboard() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [summaryRes, chartsRes, recentRes] = await Promise.all([
         api.get(`/dashboard/summary?timeframe=${timeframe}`),
@@ -116,6 +118,7 @@ function Dashboard() {
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Dashboard fetch failed:', err);
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -150,7 +153,7 @@ function Dashboard() {
         <div>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Business Overview</h1>
           <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5 flex items-center space-x-2">
-            <span>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Loading data...'}</span>
+            <span>{error ? '⚠ Error loading data' : lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : loading ? 'Loading data...' : 'Ready'}</span>
             {liveEvent && (
               <span className="inline-flex items-center space-x-1 text-emerald-600 text-xs font-semibold">
                 <Wifi size={11} />
@@ -189,6 +192,22 @@ function Dashboard() {
 
       <BulkTransactionModal isOpen={showBulkModal} onClose={() => setShowBulkModal(false)} onSuccess={fetchData} />
       <CustomerSearchModal isOpen={showCustomerSearch} onClose={() => setShowCustomerSearch(false)} />
+
+      {/* Error Banner */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle size={18} className="text-red-500 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-700">Failed to load dashboard data</p>
+              <p className="text-xs text-red-500 mt-0.5">{error}</p>
+            </div>
+          </div>
+          <button onClick={fetchData} className="text-xs font-bold text-red-600 hover:text-red-800 underline">
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* KPI Cards */}
       {loading ? (
