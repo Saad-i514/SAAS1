@@ -30,7 +30,17 @@ class Settings(BaseSettings):
     # CORS - comma-separated list of allowed origins
     BACKEND_CORS_ORIGINS: str = os.getenv(
         "BACKEND_CORS_ORIGINS",
-        "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://localhost:3000"
+        "https://bsmanagement.vercel.app,"
+        "https://bizmanagement.vercel.app,"
+        "https://saas-1-pied.vercel.app,"
+        "https://saas-1-qqmz.vercel.app,"
+        "https://saas-1-six.vercel.app,"
+        "https://saas-1-orcin.vercel.app,"
+        "http://localhost:5173,"
+        "http://localhost:5174,"
+        "http://127.0.0.1:5173,"
+        "http://127.0.0.1:5174,"
+        "http://localhost:3000"
     )
 
     # ── AI Agent API Keys ────────────────────────────────────────────────────

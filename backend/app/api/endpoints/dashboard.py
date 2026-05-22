@@ -1,10 +1,9 @@
 from typing import Any
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from app import models
 from app.api import deps
-from app.core import cache
 from app.utils import utc_date_to_local
 from datetime import datetime, timedelta, timezone
 import logging
@@ -64,20 +63,17 @@ def _sum_debit_range(
 
 @router.get("/summary")
 def get_dashboard_summary(
+    response: Response,
     timeframe: str = Query("monthly", description="daily | weekly | monthly | yearly | all"),
     tz_offset: int = Query(5, description="Client UTC offset in hours"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     try:
+        response.headers["Cache-Control"] = "no-store"
         company_id = _get_company_id(current_user, db)
         if company_id is None:
             return {**_EMPTY_SUMMARY, "timeframe": timeframe}
-
-        # ── Cache check ──────────────────────────────────────────────────────
-        cache_key, cached_val = cache.cached(company_id, 60, "dashboard_summary", timeframe, tz_offset)
-        if cached_val is not None:
-            return cached_val
 
         start = _start_date(timeframe, tz_offset)
 
@@ -154,7 +150,6 @@ def get_dashboard_summary(
             "total_purchase": round(total_purchase, 2),
             "timeframe": timeframe,
         }
-        cache.set_tagged(company_id, cache_key, result, ttl=60)
         return result
     except Exception as e:
         logger.error(f"Dashboard summary error: {e}", exc_info=True)
@@ -163,11 +158,13 @@ def get_dashboard_summary(
 
 @router.get("/charts")
 def get_dashboard_charts(
+    response: Response,
     tz_offset: int = Query(5, description="Client UTC offset in hours"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     try:
+        response.headers["Cache-Control"] = "no-store"
         company_id = _get_company_id(current_user, db)
         if company_id is None:
             return {
@@ -175,11 +172,6 @@ def get_dashboard_charts(
                 "sales_distribution": [{"name": "No Products", "value": 1}],
                 "top_products": [],
             }
-
-        # ── Cache check (5 min TTL — charts change slowly) ──────────────────
-        cache_key, cached_val = cache.cached(company_id, 300, "dashboard_charts", tz_offset)
-        if cached_val is not None:
-            return cached_val
 
         tz = timezone(timedelta(hours=tz_offset))
         now_local = datetime.now(tz)
@@ -285,7 +277,6 @@ def get_dashboard_charts(
                 for r in top_products
             ],
         }
-        cache.set_tagged(company_id, cache_key, result, ttl=300)
         return result
     except Exception as e:
         logger.error(f"Dashboard charts error: {e}", exc_info=True)
@@ -294,11 +285,13 @@ def get_dashboard_charts(
 
 @router.get("/recent-transactions")
 def get_recent_transactions(
+    response: Response,
     limit: int = Query(10, ge=1, le=50),
     tz_offset: int = Query(5, description="Client UTC offset in hours"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
+    response.headers["Cache-Control"] = "no-store"
     company_id = _get_company_id(current_user, db)
     if company_id is None:
         return []

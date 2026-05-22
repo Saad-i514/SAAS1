@@ -148,22 +148,53 @@ export default function Dashboard() {
   const [liveEvent, setLiveEvent]     = useState(null);
   const [showBulk, setShowBulk]       = useState(false);
   const [showSearch, setShowSearch]   = useState(false);
+  const requestSeqRef = useRef(0);
 
   const fetchData = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const [sRes, cRes, rRes] = await Promise.all([
-        api.get(`/dashboard/summary?timeframe=${timeframe}`),
-        api.get('/dashboard/charts'),
-        api.get('/dashboard/recent-transactions?limit=8'),
-      ]);
-      setSummary(sRes.data);
-      setCharts(cRes.data);
-      setRecentTx(rRes.data);
-      setLastUpdated(new Date());
-    } catch (err) {
+    const requestId = requestSeqRef.current + 1;
+    requestSeqRef.current = requestId;
+
+    setLoading(true);
+    setError(null);
+    setSummary(null);
+
+    const [summaryRes, chartsRes, recentRes] = await Promise.allSettled([
+      api.get('/dashboard/summary', { params: { timeframe } }),
+      api.get('/dashboard/charts'),
+      api.get('/dashboard/recent-transactions', { params: { limit: 8 } }),
+    ]);
+
+    if (requestSeqRef.current !== requestId) return;
+
+    const failures = [];
+    if (summaryRes.status === 'fulfilled') {
+      setSummary(summaryRes.value.data);
+    } else {
+      failures.push(summaryRes.reason);
+    }
+
+    if (chartsRes.status === 'fulfilled') {
+      setCharts(chartsRes.value.data);
+    } else {
+      failures.push(chartsRes.reason);
+      setCharts(null);
+    }
+
+    if (recentRes.status === 'fulfilled') {
+      setRecentTx(recentRes.value.data);
+    } else {
+      failures.push(recentRes.reason);
+      setRecentTx([]);
+    }
+
+    if (failures.length) {
+      const err = failures[0];
       setError(err?.response?.data?.detail || err?.message || 'Failed to load');
-    } finally { setLoading(false); }
+    } else {
+      setLastUpdated(new Date());
+    }
+
+    setLoading(false);
   }, [timeframe]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -240,7 +271,7 @@ export default function Dashboard() {
 
       {/* ── Primary KPIs ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? [...Array(4)].map((_, i) => <SkeletonKpi key={i} />) : (
+        {loading || !summary ? [...Array(4)].map((_, i) => <SkeletonKpi key={i} />) : (
           <>
             <KpiCard
               title={isProfit ? 'Net Profit' : 'Net Loss'}
@@ -258,7 +289,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Secondary KPIs ── */}
-      {!loading && (
+      {!loading && summary && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { label: 'Products',   value: fmt(summary?.product_count),    icon: Boxes,         color: 'text-violet-600 dark:text-violet-400',  bg: 'bg-violet-50 dark:bg-violet-900/15' },
