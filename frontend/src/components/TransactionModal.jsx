@@ -17,7 +17,13 @@ const colorMap = {
 function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
   const [formData, setFormData] = useState({
     type: 'sale',
-    date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
+    date: (() => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
     supplier_id: '',
     product_name: initialProduct || '',
     quantity: 1,
@@ -131,7 +137,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
         debit: parseFloat(formData.debit),
         discount: parseFloat(formData.discount) || 0,
         supplier_id: formData.supplier_id ? parseInt(formData.supplier_id) : null,
-        date: formData.date ? `${formData.date}T12:00:00` : undefined,
+        date: formData.date || undefined,
       };
       await api.post('/transactions/', payload);
       setSuccess(true);

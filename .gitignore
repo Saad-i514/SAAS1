@@ -52,3 +52,4 @@ test_*.py
 # Package lock files at root (use frontend/backend specific ones)
 /package-lock.json
 /package.json
+.env
