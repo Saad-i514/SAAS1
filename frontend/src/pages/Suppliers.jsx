@@ -35,8 +35,8 @@ function SupplierHistoryModal({ supplier, onClose }) {
       <div className="modal max-w-4xl max-h-[90vh] flex flex-col">
         <div className="modal-header flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Building2 size={16} className="text-indigo-600 dark:text-indigo-400" />
+            <div className="w-9 h-9 bg-violet-50 dark:bg-violet-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Building2 size={16} className="text-violet-600 dark:text-violet-400" />
             </div>
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{supplier.name}</h2>
@@ -48,7 +48,7 @@ function SupplierHistoryModal({ supplier, onClose }) {
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center py-16">
-            <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : data ? (
           <>
@@ -74,7 +74,7 @@ function SupplierHistoryModal({ supplier, onClose }) {
                       onClick={() => setActiveCategory(activeCategory === cat.category ? 'all' : cat.category)}
                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                         activeCategory === cat.category
-                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          ? 'bg-violet-600 text-white border-violet-600'
                           : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:border-indigo-300'
                       }`}
                     >
@@ -372,8 +372,8 @@ export default function Suppliers() {
             </div>
           </div>
           <div className="card px-4 py-3 flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <DollarSign size={15} className="text-indigo-600 dark:text-indigo-400" />
+            <div className="w-8 h-8 bg-violet-50 dark:bg-violet-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <DollarSign size={15} className="text-violet-600 dark:text-violet-400" />
             </div>
             <div>
               <p className="text-xs text-gray-500 dark:text-slate-400">Active</p>
@@ -475,8 +475,8 @@ export default function Suppliers() {
                   <tr key={s.id} className="group">
                     <td>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <span className="text-indigo-600 dark:text-indigo-400 font-semibold text-xs">{s.name[0]?.toUpperCase()}</span>
+                        <div className="w-8 h-8 bg-violet-50 dark:bg-violet-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <span className="text-violet-600 dark:text-violet-400 font-semibold text-xs">{s.name[0]?.toUpperCase()}</span>
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">{s.name}</p>

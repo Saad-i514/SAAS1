@@ -50,7 +50,7 @@ function DynamicColumnManager({ tableName, onColumnAdded }) {
     if (loading) return null;
 
     return (
-        <div className="mb-6 bg-indigo-50/50 border border-indigo-100 rounded-xl p-4">
+        <div className="mb-6 bg-violet-50/50 border border-indigo-100 rounded-xl p-4">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-semibold text-indigo-900 flex items-center">
                     <Layers size={16} className="mr-2" />
@@ -58,7 +58,7 @@ function DynamicColumnManager({ tableName, onColumnAdded }) {
                 </h3>
                 <button
                     onClick={() => setShowAdd(!showAdd)}
-                    className="text-indigo-600 border border-indigo-200 hover:bg-indigo-100 bg-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                    className="text-violet-600 border border-violet-200 hover:bg-violet-100 bg-white px-3 py-1 rounded text-xs font-medium transition-colors"
                 >
                     {showAdd ? 'Cancel' : '+ Add Field'}
                 </button>
@@ -88,7 +88,7 @@ function DynamicColumnManager({ tableName, onColumnAdded }) {
                             <option value="boolean">Yes/No</option>
                         </select>
                     </div>
-                    <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-sm font-medium h-[34px]">
+                    <button type="submit" className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-1.5 rounded text-sm font-medium h-[34px]">
                         Save
                     </button>
                 </form>

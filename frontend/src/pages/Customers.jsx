@@ -203,7 +203,7 @@ function LedgerModal({ customer, onClose }) {
                           <td><span className={`badge ${txBadge[tx.type] || 'badge-gray'}`}>{tx.type?.toUpperCase()}</span></td>
                           <td className="font-medium text-gray-900 dark:text-white">{tx.product_name || '—'}</td>
                           <td className="text-right font-semibold tabular text-gray-900 dark:text-white">Rs {(tx.amount||0).toFixed(2)}</td>
-                          <td className="text-right tabular text-indigo-600 dark:text-indigo-400 font-semibold">Rs {(tx.balance_after||0).toFixed(2)}</td>
+                          <td className="text-right tabular text-violet-600 dark:text-violet-400 font-semibold">Rs {(tx.balance_after||0).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -335,12 +335,12 @@ export default function Customers() {
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
               accent === 'amber' ? 'bg-amber-50 dark:bg-amber-900/20' :
               accent === 'red'   ? 'bg-red-50 dark:bg-red-900/20' :
-              'bg-indigo-50 dark:bg-indigo-900/20'
+              'bg-violet-50 dark:bg-violet-900/20'
             }`}>
               <Icon size={18} className={
                 accent === 'amber' ? 'text-amber-600 dark:text-amber-400' :
                 accent === 'red'   ? 'text-red-600 dark:text-red-400' :
-                'text-indigo-600 dark:text-indigo-400'
+                'text-violet-600 dark:text-violet-400'
               } />
             </div>
             <div>
@@ -396,7 +396,7 @@ export default function Customers() {
                     <tr key={c.id} className="group">
                       <td>
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-semibold text-xs flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center text-violet-600 dark:text-violet-400 font-semibold text-xs flex-shrink-0">
                             {c.name[0].toUpperCase()}
                           </div>
                           <div>

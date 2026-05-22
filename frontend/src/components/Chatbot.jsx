@@ -64,7 +64,7 @@ function MessageBubble({ msg, onRevert }) {
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} group`}>
       <div className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 shadow-sm text-sm leading-relaxed
         ${isUser
-          ? 'bg-indigo-600 text-white rounded-tr-none'
+          ? 'bg-violet-600 text-white rounded-tr-none'
           : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none'
         }
         ${msg.isError ? 'bg-red-50 border-red-200 text-red-700' : ''}
@@ -137,7 +137,7 @@ function ScannedDataCard({ data, onConfirm, onDiscard, loading }) {
   return (
     <div className="bg-white border border-indigo-100 rounded-2xl shadow-md p-4 w-full">
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
-        <div className="flex items-center space-x-2 text-indigo-700 font-bold">
+        <div className="flex items-center space-x-2 text-violet-700 font-bold">
           <CheckCircle size={16} />
           <span className="text-sm capitalize">{data.record_type} Data Extracted</span>
         </div>
@@ -191,7 +191,7 @@ function ScannedDataCard({ data, onConfirm, onDiscard, loading }) {
                 className={`w-full bg-gray-50 border rounded-lg px-2.5 py-1.5 text-sm outline-none transition-all
                   ${isRequired && isEmpty
                     ? 'border-red-300 focus:ring-2 focus:ring-red-500/20 focus:border-red-400'
-                    : 'border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400'
+                    : 'border-gray-200 focus:ring-2 focus:ring-violet-500/20 focus:border-indigo-400'
                   }`}
               />
             </div>
@@ -214,7 +214,7 @@ function ScannedDataCard({ data, onConfirm, onDiscard, loading }) {
           title={!canSave ? `Fill in: ${stillMissing.join(', ')}` : 'Save to database'}
           className={`flex-[2] py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5
             ${canSave && !loading
-              ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+              ? 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
         >
@@ -239,7 +239,7 @@ function TypingIndicator() {
         {[0, 1, 2].map(i => (
           <span
             key={i}
-            className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
+            className="w-2 h-2 bg-violet-400 rounded-full animate-bounce"
             style={{ animationDelay: `${i * 0.15}s` }}
           />
         ))}
@@ -512,7 +512,7 @@ function Chatbot() {
             <h3 className="font-bold text-sm leading-tight truncate">
               {companyName ? `${companyName} Assistant` : 'AI Assistant'}
             </h3>
-            <p className="text-xs text-indigo-200">Ask questions · Scan images · Get help</p>
+            <p className="text-xs text-violet-200">Ask questions · Scan images · Get help</p>
           </div>
           <button
             onClick={handleClearChat}
@@ -544,7 +544,7 @@ function Chatbot() {
                   <span className="text-xs font-semibold text-gray-600">Scanning image with Mistral AI...</span>
                 </div>
                 <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-500 rounded-full animate-pulse w-2/3" />
+                  <div className="h-full bg-violet-500 rounded-full animate-pulse w-2/3" />
                 </div>
               </div>
             </div>
@@ -571,11 +571,11 @@ function Chatbot() {
         {/* Input area */}
         <div className="flex-shrink-0 p-3 bg-white border-t border-gray-100">
           <div className="flex items-end space-x-2 bg-gray-50 border border-gray-200 rounded-2xl px-2 py-1.5
-            focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all shadow-inner">
+            focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-violet-500/10 transition-all shadow-inner">
             {/* Image upload button */}
             <label
               title="Upload image to scan"
-              className="p-1.5 text-gray-400 hover:text-indigo-600 cursor-pointer transition-colors rounded-xl hover:bg-indigo-50 flex-shrink-0 self-end mb-0.5"
+              className="p-1.5 text-gray-400 hover:text-violet-600 cursor-pointer transition-colors rounded-xl hover:bg-violet-50 flex-shrink-0 self-end mb-0.5"
             >
               <ImageIcon size={18} />
               <input
@@ -608,7 +608,7 @@ function Chatbot() {
               disabled={!input.trim() || isLoading || isScanning}
               className={`p-2 rounded-xl transition-all flex-shrink-0 self-end mb-0.5
                 ${input.trim() && !isLoading && !isScanning
-                  ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20'
+                  ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-indigo-500/20'
                   : 'text-gray-300 cursor-not-allowed'
                 }`}
             >

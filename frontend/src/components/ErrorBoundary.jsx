@@ -26,7 +26,7 @@ class ErrorBoundary extends React.Component {
             <p className="text-gray-500 mb-6">An unexpected error occurred in the application. Please try reloading the page.</p>
             <button 
                 onClick={() => window.location.reload()}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition-all shadow-md font-medium"
+                className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2.5 rounded-xl transition-all shadow-md font-medium"
             >
                 Reload Application
             </button>

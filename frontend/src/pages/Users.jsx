@@ -109,8 +109,8 @@ export default function Users() {
                   <tr key={user.id} className="group">
                     <td>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <span className="text-indigo-600 dark:text-indigo-400 font-semibold text-xs">{user.email[0]?.toUpperCase()}</span>
+                        <div className="w-8 h-8 bg-violet-50 dark:bg-violet-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <span className="text-violet-600 dark:text-violet-400 font-semibold text-xs">{user.email[0]?.toUpperCase()}</span>
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">{user.email}</p>

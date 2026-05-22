@@ -49,7 +49,7 @@ export default function SuperAdminDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <Building2 size={20} className="text-indigo-600" /> Tenant Management
+            <Building2 size={20} className="text-violet-600" /> Tenant Management
           </h1>
           <p className="page-subtitle">{companies.length} active tenants</p>
         </div>
@@ -146,8 +146,8 @@ export default function SuperAdminDashboard() {
                   <td className="font-mono text-xs text-gray-400 dark:text-slate-500 tabular">#{company.id}</td>
                   <td>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <span className="text-indigo-600 dark:text-indigo-400 font-semibold text-xs">{company.name[0]?.toUpperCase()}</span>
+                      <div className="w-8 h-8 bg-violet-50 dark:bg-violet-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span className="text-violet-600 dark:text-violet-400 font-semibold text-xs">{company.name[0]?.toUpperCase()}</span>
                       </div>
                       <p className="font-medium text-gray-900 dark:text-white">{company.name}</p>
                     </div>

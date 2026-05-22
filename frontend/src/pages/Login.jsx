@@ -70,13 +70,13 @@ function Login() {
     <div className="min-h-screen flex bg-slate-950">
 
       {/* ── Left Panel ─────────────────────────────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-[52%] flex-col justify-between p-12 bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-[52%] flex-col justify-between p-12 bg-gradient-to-br from-slate-900 via-violet-950 to-violet-950 relative overflow-hidden">
 
         {/* Ambient blobs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-32 -right-32 w-[500px] h-[500px] bg-indigo-600/15 rounded-full blur-3xl" />
+          <div className="absolute -top-32 -right-32 w-[500px] h-[500px] bg-violet-600/15 rounded-full blur-3xl" />
           <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-purple-600/15 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-indigo-500/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-violet-500/5 rounded-full blur-3xl" />
           {/* Grid overlay */}
           <div className="absolute inset-0 opacity-[0.03]"
             style={{ backgroundImage: 'linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
@@ -84,25 +84,25 @@ function Login() {
 
         {/* Logo */}
         <div className="relative z-10 flex items-center space-x-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/30">
             <TrendingUp size={20} className="text-white" />
           </div>
           <div>
             <span className="text-white font-black text-lg tracking-tight">BizManager</span>
-            <span className="ml-1.5 text-xs font-bold text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30">PRO</span>
+            <span className="ml-1.5 text-xs font-bold text-violet-400 bg-violet-500/20 px-2 py-0.5 rounded-full border border-violet-500/30">PRO</span>
           </div>
         </div>
 
         {/* Hero text */}
         <div className="relative z-10 space-y-10">
           <div className="space-y-4">
-            <div className="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-1.5">
+            <div className="inline-flex items-center space-x-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-4 py-1.5">
               <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-              <span className="text-indigo-300 text-xs font-semibold tracking-wide uppercase">Enterprise Business Platform</span>
+              <span className="text-violet-300 text-xs font-semibold tracking-wide uppercase">Enterprise Business Platform</span>
             </div>
             <h1 className="text-5xl font-black text-white leading-[1.1] tracking-tight">
               Run your business<br />
-              <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
                 smarter, faster.
               </span>
             </h1>
@@ -155,7 +155,7 @@ function Login() {
 
           {/* Mobile logo */}
           <div className="flex items-center space-x-3 mb-10 lg:hidden">
-            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-violet-600 rounded-xl flex items-center justify-center">
               <TrendingUp size={18} className="text-white" />
             </div>
             <span className="text-gray-900 font-black text-lg">BizManager Pro</span>
@@ -184,7 +184,7 @@ function Login() {
               <div className="relative">
                 <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" />
                 <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder-gray-300 text-sm"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-gray-900 placeholder-gray-300 text-sm"
                   placeholder="admin@company.com" autoComplete="email" />
               </div>
             </div>
@@ -193,7 +193,7 @@ function Login() {
               <div className="relative">
                 <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" />
                 <input type={showPassword ? 'text' : 'password'} required value={password} onChange={e => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-11 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder-gray-300 text-sm"
+                  className="w-full pl-10 pr-11 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all text-gray-900 placeholder-gray-300 text-sm"
                   placeholder="••••••••" autoComplete="current-password" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-300 hover:text-gray-500 transition-colors">
@@ -203,7 +203,7 @@ function Login() {
             </div>
             <div className="pt-1">
               <button type="submit" disabled={loading}
-                className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold rounded-xl transition-all shadow-sm shadow-indigo-500/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center gap-2 group text-sm">
+                className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white font-semibold rounded-xl transition-all shadow-sm shadow-violet-500/20 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 flex items-center justify-center gap-2 group text-sm">
                 {loading ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>Signing in…</span></>
                 ) : (

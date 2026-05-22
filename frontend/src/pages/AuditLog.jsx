@@ -65,7 +65,7 @@ export default function AuditLog() {
             <button key={a} onClick={() => { setAction(a); setPage(0); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                 action === a
-                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  ? 'bg-violet-600 text-white border-violet-600'
                   : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-gray-300'
               }`}>
               {a || 'All Actions'}
@@ -76,7 +76,7 @@ export default function AuditLog() {
             <button key={r} onClick={() => { setResource(r); setPage(0); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all capitalize ${
                 resource === r
-                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  ? 'bg-violet-600 text-white border-violet-600'
                   : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-gray-300'
               }`}>
               {r || 'All Resources'}

@@ -340,7 +340,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
               onClick={() => setReportType('customer')}
               className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
                 reportType === 'customer'
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-violet-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -350,7 +350,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
               onClick={() => setReportType('business')}
               className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
                 reportType === 'business'
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-violet-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -364,7 +364,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
               <input
                 type="text"
                 placeholder="Enter customer/shop name..."
-                className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all"
+                className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-violet-500 transition-all"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && searchCustomer()}
@@ -377,7 +377,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
               <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Start Date</label>
               <input
                 type="date"
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all font-medium"
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-violet-500 transition-all font-medium"
                 value={startDate}
                 onChange={(e) => {
                     setStartDate(e.target.value);
@@ -389,7 +389,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
               <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">End Date</label>
               <input
                 type="date"
-                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all font-medium"
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-violet-500 transition-all font-medium"
                 value={endDate}
                 onChange={(e) => {
                     setEndDate(e.target.value);
@@ -410,7 +410,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
                  }}
                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                      timeframe === tf && !startDate && !endDate
-                     ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                     ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
                      : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
                  }`}
                >
@@ -435,7 +435,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
           <button
             onClick={searchCustomer}
             disabled={loading}
-            className="w-full flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center space-x-2 bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-50"
           >
             {loading ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -476,7 +476,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
                   <p className="text-xs font-bold text-gray-500 uppercase">
                     {reportType === 'customer' ? 'Total Amount' : 'Net Profit'}
                   </p>
-                  <p className="text-2xl font-black text-indigo-600 mt-1">
+                  <p className="text-2xl font-black text-violet-600 mt-1">
                     Rs {reportType === 'customer' 
                       ? reportData.total_amount?.toLocaleString() 
                       : (reportData.summary?.total_profit || 0).toLocaleString()}
@@ -486,7 +486,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
               <div className="flex space-x-3 mt-4">
                 <button
                   onClick={handlePrint}
-                  className="flex-1 flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all"
+                  className="flex-1 flex items-center justify-center space-x-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all"
                 >
                   <Printer size={16} />
                   <span>Print Report</span>
@@ -498,7 +498,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
             {reportType === 'customer' && reportData.product_summary && reportData.product_summary.length > 0 && (
               <div className="mb-6">
                 <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center space-x-2">
-                  <Package size={16} className="text-indigo-600" />
+                  <Package size={16} className="text-violet-600" />
                   <span>Product Summary</span>
                 </h4>
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -518,7 +518,7 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
                           <td className="px-4 py-3 font-semibold text-gray-900">{p.product}</td>
                           <td className="px-4 py-3 text-gray-600">{p.category || '-'}</td>
                           <td className="px-4 py-3 text-center font-bold text-gray-700">{p.qty}</td>
-                          <td className="px-4 py-3 text-right font-mono font-bold text-indigo-600">Rs {p.amount.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right font-mono font-bold text-violet-600">Rs {p.amount.toFixed(2)}</td>
                           <td className="px-4 py-3 text-center text-gray-600">{p.transactions}</td>
                         </tr>
                       ))}
@@ -571,12 +571,12 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
                         {reportType === 'customer' ? (
                           <>
                             <td className="px-4 py-3 text-right font-mono text-orange-600">Rs {(item.discount || 0).toFixed(2)}</td>
-                            <td className="px-4 py-3 text-right font-mono font-bold text-indigo-600">Rs {(item.total_amount || 0).toFixed(2)}</td>
+                            <td className="px-4 py-3 text-right font-mono font-bold text-violet-600">Rs {(item.total_amount || 0).toFixed(2)}</td>
                           </>
                         ) : (
                           <>
                             <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600">Rs {(item.total_sale_price || 0).toFixed(2)}</td>
-                            <td className="px-4 py-3 text-right font-mono font-bold text-indigo-600">Rs {(item.profit || 0).toFixed(2)}</td>
+                            <td className="px-4 py-3 text-right font-mono font-bold text-violet-600">Rs {(item.profit || 0).toFixed(2)}</td>
                           </>
                         )}
                       </tr>

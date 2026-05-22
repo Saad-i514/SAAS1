@@ -150,7 +150,7 @@ export default function Transactions() {
               onClick={() => { setTimeframe(tf.value); setPage(0); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                 timeframe === tf.value
-                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  ? 'bg-violet-600 text-white border-violet-600'
                   : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-gray-300'
               }`}
             >
@@ -164,7 +164,7 @@ export default function Transactions() {
               onClick={() => { setTxType(t); setPage(0); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all capitalize ${
                 txType === t
-                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  ? 'bg-violet-600 text-white border-violet-600'
                   : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-gray-300'
               }`}
             >

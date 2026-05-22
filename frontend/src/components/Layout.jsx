@@ -41,7 +41,7 @@ function NavItem({ item, active, onClick }) {
       className={`
         flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150
         ${active
-          ? 'bg-indigo-600 text-white font-medium shadow-sm'
+          ? 'bg-violet-600 text-white font-medium shadow-sm'
           : 'text-slate-400 hover:text-white hover:bg-white/5 font-normal'
         }
       `}
@@ -101,7 +101,7 @@ function Layout() {
         {/* Logo */}
         <div className="h-14 flex items-center px-4 border-b border-white/[0.06] flex-shrink-0">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-7 h-7 bg-violet-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <TrendingUp size={14} className="text-white" />
             </div>
             <div className="min-w-0">
@@ -120,7 +120,7 @@ function Layout() {
         {/* User chip */}
         <div className="px-3 py-3 border-b border-white/[0.06] flex-shrink-0">
           <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-white/[0.04]">
-            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
               {initials}
             </div>
             <div className="min-w-0 flex-1">
@@ -194,7 +194,7 @@ function Layout() {
             <button className="btn-ghost btn btn-icon relative">
               <Bell size={16} />
             </button>
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold ml-1">
+            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center text-white text-xs font-semibold ml-1">
               {initials}
             </div>
           </div>

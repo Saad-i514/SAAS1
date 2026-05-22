@@ -64,14 +64,14 @@ function CustomerSearchModal({ isOpen, onClose }) {
               <input
                 type="text"
                 placeholder="Type customer or shop name..."
-                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 autoFocus
               />
             </div>
             <button type="submit" disabled={loading || !query.trim()}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-bold rounded-xl text-sm transition-all flex items-center space-x-2">
+              className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:bg-indigo-300 text-white font-bold rounded-xl text-sm transition-all flex items-center space-x-2">
               {loading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
               <span>Search</span>
             </button>
@@ -93,9 +93,9 @@ function CustomerSearchModal({ isOpen, onClose }) {
             <>
               {/* Summary */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
+                <div className="bg-violet-50 border border-indigo-100 rounded-xl p-4 text-center">
                   <p className="text-2xl font-black text-indigo-900">Rs {Number(data.total_amount).toLocaleString()}</p>
-                  <p className="text-xs text-indigo-600 font-medium mt-0.5">Total Amount</p>
+                  <p className="text-xs text-violet-600 font-medium mt-0.5">Total Amount</p>
                 </div>
                 <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-center">
                   <p className="text-2xl font-black text-gray-900">{data.total_transactions}</p>

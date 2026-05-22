@@ -9,7 +9,7 @@ const TX_TYPES = [
 ];
 
 const colorMap = {
-  indigo: { active: 'bg-indigo-50 border-indigo-400 text-indigo-700', icon: 'text-indigo-600', btn: 'bg-indigo-600 hover:bg-indigo-700' },
+  indigo: { active: 'bg-violet-50 border-indigo-400 text-violet-700', icon: 'text-violet-600', btn: 'bg-violet-600 hover:bg-violet-700' },
   emerald: { active: 'bg-emerald-50 border-emerald-400 text-emerald-700', icon: 'text-emerald-600', btn: 'bg-emerald-600 hover:bg-emerald-700' },
   orange: { active: 'bg-orange-50 border-orange-400 text-orange-700', icon: 'text-orange-600', btn: 'bg-orange-600 hover:bg-orange-700' },
 };
@@ -214,7 +214,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
                 <input
                   type="date"
                   required
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
                   value={formData.date}
                   onChange={e => setFormData(p => ({ ...p, date: e.target.value }))}
                 />
@@ -226,7 +226,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
                 <input
                   type="text"
                   placeholder="Optional"
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
                   value={formData.order_no}
                   onChange={e => setFormData(p => ({ ...p, order_no: e.target.value }))}
                 />
@@ -238,7 +238,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Supplier *</label>
                   <select
                     required
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
                     value={formData.supplier_id}
                     onChange={e => setFormData(p => ({ ...p, supplier_id: e.target.value }))}
                   >
@@ -257,7 +257,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
                   <input
                     type="text"
                     placeholder="Customer or shop name"
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
                     value={formData.customer_name}
                     onChange={e => setFormData(p => ({ ...p, customer_name: e.target.value }))}
                   />
@@ -269,7 +269,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Product *</label>
                 <select
                   required
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
                   value={formData.product_name}
                   onChange={e => handleProductChange(e.target.value)}
                 >
@@ -294,7 +294,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
                   type="number"
                   required
                   min="1"
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
                   value={formData.quantity}
                   onChange={e => setFormData(p => ({ ...p, quantity: e.target.value }))}
                 />
@@ -308,7 +308,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
                   required
                   min="0"
                   step="0.01"
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
                   value={formData.unit_price}
                   onChange={e => setFormData(p => ({ ...p, unit_price: e.target.value }))}
                 />
@@ -321,7 +321,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
                   value={formData.discount}
                   onChange={e => setFormData(p => ({ ...p, discount: e.target.value }))}
                 />
@@ -331,7 +331,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Payment</label>
                 <select
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
                   value={formData.payment_term}
                   onChange={e => setFormData(p => ({ ...p, payment_term: e.target.value }))}
                 >

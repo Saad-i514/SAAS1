@@ -12,7 +12,7 @@ const TX_TYPES = [
 ];
 
 const colorMap = {
-  indigo:  { active: 'bg-indigo-50 border-indigo-400 text-indigo-700',  icon: 'text-indigo-600',  btn: 'bg-indigo-600 hover:bg-indigo-700' },
+  indigo:  { active: 'bg-violet-50 border-indigo-400 text-violet-700',  icon: 'text-violet-600',  btn: 'bg-violet-600 hover:bg-violet-700' },
   emerald: { active: 'bg-emerald-50 border-emerald-400 text-emerald-700', icon: 'text-emerald-600', btn: 'bg-emerald-600 hover:bg-emerald-700' },
   orange:  { active: 'bg-orange-50 border-orange-400 text-orange-700',  icon: 'text-orange-600',  btn: 'bg-orange-600 hover:bg-orange-700' },
 };
@@ -203,17 +203,17 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Date</label>
-                <input type="date" required className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all"
+                <input type="date" required className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-violet-500 transition-all"
                   value={date} onChange={e => setDate(e.target.value)} />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Order No</label>
-                <input type="text" placeholder="Auto-generated" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all"
+                <input type="text" placeholder="Auto-generated" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-violet-500 transition-all"
                   value={orderNo} onChange={e => setOrderNo(e.target.value)} />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Payment</label>
-                <select className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all"
+                <select className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-violet-500 transition-all"
                   value={paymentTerm} onChange={e => setPaymentTerm(e.target.value)}>
                   <option value="Cash">Cash</option>
                   <option value="Credit">Credit</option>
@@ -224,7 +224,7 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
                 {txType === 'purchase' ? (
                   <>
                     <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Supplier *</label>
-                    <select required className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all"
+                    <select required className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-violet-500 transition-all"
                       value={supplierId} onChange={e => setSupplierId(e.target.value)}>
                       <option value="">Select...</option>
                       {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -233,7 +233,7 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
                 ) : (
                   <>
                     <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Customer / Shop *</label>
-                    <input type="text" required placeholder="Shop name" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all"
+                    <input type="text" required placeholder="Shop name" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-violet-500 transition-all"
                       value={customerName} onChange={e => setCustomerName(e.target.value)} />
                   </>
                 )}
@@ -259,7 +259,7 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
                   return (
                     <div key={idx} className={`px-4 py-3 grid grid-cols-12 gap-2 items-center ${stockWarning ? 'bg-red-50' : ''}`}>
                       <div className="col-span-4">
-                        <select required className={`w-full px-2 py-2 border rounded-lg text-sm outline-none transition-all ${stockWarning ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50 focus:border-indigo-500'}`}
+                        <select required className={`w-full px-2 py-2 border rounded-lg text-sm outline-none transition-all ${stockWarning ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50 focus:border-violet-500'}`}
                           value={item.product_name} onChange={e => handleProductChange(idx, e.target.value)}>
                           <option value="">Select product...</option>
                           {products.map(p => (
@@ -281,15 +281,15 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
                         </span>
                       </div>
                       <div className="col-span-2">
-                        <input type="number" required min="1" className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-center outline-none focus:border-indigo-500 transition-all"
+                        <input type="number" required min="1" className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-center outline-none focus:border-violet-500 transition-all"
                           value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} />
                       </div>
                       <div className="col-span-2">
-                        <input type="number" required min="0" step="0.01" className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-indigo-500 transition-all"
+                        <input type="number" required min="0" step="0.01" className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-violet-500 transition-all"
                           value={item.unit_price} onChange={e => updateItem(idx, 'unit_price', e.target.value)} />
                       </div>
                       <div className="col-span-1">
-                        <input type="number" min="0" step="0.01" className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-indigo-500 transition-all"
+                        <input type="number" min="0" step="0.01" className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-violet-500 transition-all"
                           value={item.discount} onChange={e => updateItem(idx, 'discount', e.target.value)} />
                       </div>
                       <div className="col-span-1 flex flex-col items-end space-y-1">
@@ -307,7 +307,7 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
 
               <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
                 <button type="button" onClick={addRow}
-                  className="flex items-center space-x-1.5 text-indigo-600 hover:text-indigo-800 text-sm font-semibold transition-all">
+                  className="flex items-center space-x-1.5 text-violet-600 hover:text-indigo-800 text-sm font-semibold transition-all">
                   <Plus size={15} />
                   <span>Add Item</span>
                 </button>

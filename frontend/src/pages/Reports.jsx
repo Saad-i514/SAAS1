@@ -132,7 +132,7 @@ export default function Reports() {
       <div className="page animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="page-title flex items-center gap-2"><Download size={20} className="text-indigo-600" /> Data Exports</h1>
+            <h1 className="page-title flex items-center gap-2"><Download size={20} className="text-violet-600" /> Data Exports</h1>
             <p className="page-subtitle">Export your data to CSV or PDF</p>
           </div>
           <button onClick={() => setViewMode('sales')} className="btn btn-secondary btn-sm"><BarChart2 size={14} /> Sales Report</button>
@@ -172,7 +172,7 @@ export default function Reports() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="page-title flex items-center gap-2"><Activity size={20} className="text-indigo-600" /> Sales Report</h1>
+          <h1 className="page-title flex items-center gap-2"><Activity size={20} className="text-violet-600" /> Sales Report</h1>
           <p className="page-subtitle">Itemized sales with cost and profit analysis</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -184,7 +184,7 @@ export default function Reports() {
           <div className="flex items-center bg-white dark:bg-[#161b27] border border-gray-200 dark:border-slate-700 rounded-lg p-0.5">
             {TIMEFRAMES.map(tf => (
               <button key={tf.key} onClick={() => setTimeframe(tf.key)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${timeframe === tf.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'}`}>
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${timeframe === tf.key ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'}`}>
                 {tf.label}
               </button>
             ))}
@@ -264,15 +264,15 @@ export default function Reports() {
                 return (
                   <React.Fragment key={group.customer}>
                     {/* Customer row */}
-                    <tr className="bg-indigo-50/40 dark:bg-indigo-900/10 hover:bg-indigo-50/70 dark:hover:bg-indigo-900/20 cursor-pointer border-t border-indigo-100 dark:border-indigo-900/30 transition-colors"
+                    <tr className="bg-violet-50/40 dark:bg-violet-900/10 hover:bg-violet-50/70 dark:hover:bg-violet-900/20 cursor-pointer border-t border-indigo-100 dark:border-indigo-900/30 transition-colors"
                       onClick={() => toggleCustomer(group.customer)}>
                       <td className="text-center px-3">
-                        {isExpanded ? <ChevronDown size={14} className="text-indigo-500 mx-auto" /> : <ChevronRight size={14} className="text-indigo-400 mx-auto" />}
+                        {isExpanded ? <ChevronDown size={14} className="text-indigo-500 mx-auto" /> : <ChevronRight size={14} className="text-violet-400 mx-auto" />}
                       </td>
                       <td>
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/30 rounded-md flex items-center justify-center flex-shrink-0">
-                            <User size={12} className="text-indigo-600 dark:text-indigo-400" />
+                          <div className="w-6 h-6 bg-violet-100 dark:bg-violet-900/30 rounded-md flex items-center justify-center flex-shrink-0">
+                            <User size={12} className="text-violet-600 dark:text-violet-400" />
                           </div>
                           <span className="font-semibold text-gray-900 dark:text-white text-sm">{group.customer}</span>
                           <span className="text-xs text-gray-400 dark:text-slate-500">{group.items.length} item{group.items.length !== 1 ? 's' : ''}</span>
@@ -296,9 +296,9 @@ export default function Reports() {
                     {isExpanded && group.items.map((item, rowIdx) => {
                       const isSel = selectedIds.includes(item._idx);
                       return (
-                        <tr key={item._idx} className={`border-t border-gray-50 dark:border-slate-800/60 transition-colors ${isSel ? 'bg-indigo-50/20 dark:bg-indigo-900/5' : rowIdx % 2 === 0 ? '' : 'bg-gray-50/30 dark:bg-slate-800/20'}`}>
+                        <tr key={item._idx} className={`border-t border-gray-50 dark:border-slate-800/60 transition-colors ${isSel ? 'bg-violet-50/20 dark:bg-violet-900/5' : rowIdx % 2 === 0 ? '' : 'bg-gray-50/30 dark:bg-slate-800/20'}`}>
                           <td className="text-center pl-8">
-                            <input type="checkbox" className="w-3.5 h-3.5 rounded text-indigo-600 border-gray-300 cursor-pointer"
+                            <input type="checkbox" className="w-3.5 h-3.5 rounded text-violet-600 border-gray-300 cursor-pointer"
                               checked={isSel}
                               onChange={() => setSelectedIds(prev => prev.includes(item._idx) ? prev.filter(id => id !== item._idx) : [...prev, item._idx])} />
                           </td>
