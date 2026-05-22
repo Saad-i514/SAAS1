@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 _TZ_OFFSET = 5
 
 
+from app.utils import utc_date_to_local
+
+
 # ---------------------------------------------------------------------------
 # Internal helper: run a full KPI summary between two UTC datetimes
 # ---------------------------------------------------------------------------
@@ -324,7 +327,7 @@ def get_recent_transactions(
                     "quantity": t.quantity,
                     "amount": t.debit,
                     "customer_name": t.customer_name,
-                    "date": t.date.isoformat() if t.date else None,
+                    "date": utc_date_to_local(t.date) if t.date else None,
                     "order_no": t.order_no,
                 }
                 for t in transactions
@@ -366,7 +369,7 @@ def search_customer_transactions(company_id: int, customer_name: str) -> dict:
                 amount = round(tx.debit or 0, 2)
                 total_amount += amount
                 items.append({
-                    "date": tx.date.isoformat() if tx.date else None,
+                    "date": utc_date_to_local(tx.date) if tx.date else None,
                     "type": tx.type.value if tx.type else None,
                     "product_name": tx.product_name,
                     "quantity": qty,

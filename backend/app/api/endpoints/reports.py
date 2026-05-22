@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-from app.utils import get_date_range
+from app.utils import get_date_range, utc_date_to_local
 
 
 @router.get("/sales-summary")
@@ -72,7 +72,7 @@ def get_sales_report(
         profit = round(sale_p - cost_p, 2)
 
         items.append({
-            "date": row.date.isoformat() if row.date else None,
+            "date": utc_date_to_local(row.date) if row.date else None,
             "transaction_id": row.transaction_id,
             "order_no": row.order_no,
             "product_name": row.product_name,
@@ -161,7 +161,7 @@ def get_supplier_sales_report(
         category = row.category or "Uncategorized"
 
         items.append({
-            "date": row.date.isoformat() if row.date else None,
+            "date": utc_date_to_local(row.date) if row.date else None,
             "type": row.type.value if row.type else None,
             "order_no": row.order_no,
             "product_name": row.product_name,
@@ -257,7 +257,7 @@ def search_customer_report(
 
         items.append({
             "id": row.id,
-            "date": row.date.isoformat() if row.date else None,
+            "date": utc_date_to_local(row.date) if row.date else None,
             "type": row.type.value if row.type else None,
             "order_no": row.order_no,
             "product_name": row.product_name,
@@ -325,7 +325,7 @@ def download_report_csv(
         ).order_by(models.Transaction.date.desc()).yield_per(1000)
         for t in transactions:
             writer.writerow([
-                t.date.strftime("%Y-%m-%d %H:%M:%S") if t.date else "",
+                (utc_date_to_local(t.date) + " " + t.date.strftime("%H:%M:%S")) if t.date else "",
                 t.type.value if t.type else "",
                 t.order_no or "",
                 t.product_name or "",
