@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from app import models, schemas
 from app.api import deps
+from app.core import cache
 
 router = APIRouter()
 
@@ -31,14 +32,26 @@ def read_suppliers(
     limit: int = Query(500, ge=1, le=1000),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
-    return (
+    company_id = current_user.company_id
+    if company_id is None:
+        return []
+
+    # Cache suppliers list for 5 minutes
+    cache_key, cached_val = cache.cached(company_id, 300, "suppliers_list", skip, limit)
+    if cached_val is not None:
+        return cached_val
+
+    result = (
         db.query(models.Supplier)
-        .filter(models.Supplier.company_id == current_user.company_id)
+        .filter(models.Supplier.company_id == company_id)
         .order_by(models.Supplier.name)
         .offset(skip)
         .limit(limit)
         .all()
     )
+    serialized = [schemas.supplier.Supplier.model_validate(s).model_dump() for s in result]
+    cache.set_tagged(company_id, cache_key, serialized, ttl=300)
+    return result
 
 
 @router.post("/", response_model=schemas.supplier.Supplier)
@@ -70,6 +83,7 @@ def create_supplier(
            f"Created supplier '{supplier.name}'", request)
     db.commit()
     db.refresh(supplier)
+    cache.invalidate_company(current_user.company_id)
     return supplier
 
 
@@ -111,6 +125,7 @@ def record_supplier_payment(
 
     db.commit()
     db.refresh(supplier)
+    cache.invalidate_company(current_user.company_id)
     return supplier
 
 
@@ -139,6 +154,7 @@ def update_supplier(
     db.add(supplier)
     db.commit()
     db.refresh(supplier)
+    cache.invalidate_company(current_user.company_id)
     return supplier
 
 
@@ -175,4 +191,5 @@ def delete_supplier(
            f"Deleted supplier '{supplier.name}'", request)
     db.delete(supplier)
     db.commit()
+    cache.invalidate_company(current_user.company_id)
     return {"ok": True, "deleted": supplier.name}

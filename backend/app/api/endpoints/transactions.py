@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app import models, schemas
 from app.api import deps
+from app.core import cache
 import logging
 from datetime import datetime
 from app.utils import get_date_range
@@ -448,6 +449,12 @@ def create_transaction(
         logger.error(f"Transaction creation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to record transaction")
 
+    # Invalidate all caches for this company (dashboard, products, suppliers)
+    cache.invalidate_company(current_user.company_id)
+
+    # Invalidate cache after successful transaction
+    cache.invalidate_company(current_user.company_id)
+
     # Broadcast SSE event
     _broadcast(current_user.company_id, {
         "type": "transaction_created",
@@ -565,6 +572,7 @@ def create_bulk_order(
             tx = models.Transaction(
                 company_id=company_id,
                 supplier_id=order_in.supplier_id,
+                customer_id=order_in.customer_id,
                 order_no=order_no,
                 type=tx_type,
                 date=tx_date,
@@ -583,12 +591,31 @@ def create_bulk_order(
             if product:
                 _apply_inventory(db, product, tx_type, item.quantity, order_in.add_to_stock or False)
 
-
             created_transactions.append(tx)
+
+        # Wire up customer credit ledger for the whole order total — inside the same transaction
+        if order_in.customer_name or order_in.customer_id:
+            _update_customer_balance(
+                db, company_id,
+                order_in.customer_name,
+                order_in.customer_id,
+                tx_type, round(total_amount, 2),
+            )
+
+        # Wire up supplier balance — inside the same transaction
+        _update_supplier_balance(db, company_id, order_in.supplier_id, tx_type, round(total_amount, 2))
+
+        _audit(db, current_user, "CREATE", "transaction", order_no,
+               f"Bulk {tx_type.value.upper()} order {order_no} — {len(created_transactions)} items, "
+               f"total=Rs{total_amount:.2f} customer={order_in.customer_name or '-'}",
+               request)
 
         db.commit()
         for tx in created_transactions:
             db.refresh(tx)
+
+        # Invalidate all caches for this company (dashboard, products, suppliers)
+        cache.invalidate_company(company_id)
 
     except HTTPException:
         db.rollback()
@@ -598,30 +625,8 @@ def create_bulk_order(
         logger.error(f"Bulk order creation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to record bulk order")
 
-    # Wire up customer credit ledger for the whole order total
-    if order_in.customer_name or getattr(order_in, 'customer_id', None):
-        _update_customer_balance(
-            db, company_id,
-            order_in.customer_name,
-            getattr(order_in, 'customer_id', None),
-            tx_type, round(total_amount, 2),
-        )
-
-    # Wire up supplier balance
-    _update_supplier_balance(db, company_id, order_in.supplier_id, tx_type, round(total_amount, 2))
-
-    _audit(db, current_user, "CREATE", "transaction", order_no,
-           f"Bulk {tx_type.value.upper()} order {order_no} — {len(created_transactions)} items, "
-           f"total=Rs{total_amount:.2f} customer={order_in.customer_name or '-'}",
-           request)
-
-    try:
-        db.commit()
-        for tx in created_transactions:
-            db.refresh(tx)
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Bulk order post-commit failed: {e}")
+    # Invalidate cache after successful bulk order
+    cache.invalidate_company(company_id)
 
     # Broadcast SSE
     _broadcast(company_id, {
@@ -701,4 +706,5 @@ def delete_transaction(
            request)
     db.delete(transaction)
     db.commit()
+    cache.invalidate_company(current_user.company_id)
     return {"ok": True}

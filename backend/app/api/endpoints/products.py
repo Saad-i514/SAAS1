@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFil
 from sqlalchemy.orm import Session
 from app import models, schemas
 from app.api import deps
+from app.core import cache
 import base64
 import logging
 
@@ -41,14 +42,27 @@ def read_products(
     limit: int = Query(500, ge=1, le=1000),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
-    return (
+    company_id = current_user.company_id
+    if company_id is None:
+        return []
+
+    # Cache products list for 2 minutes — invalidated on any product write
+    cache_key, cached_val = cache.cached(company_id, 120, "products_list", skip, limit)
+    if cached_val is not None:
+        return cached_val
+
+    result = (
         db.query(models.Product)
-        .filter(models.Product.company_id == current_user.company_id)
+        .filter(models.Product.company_id == company_id)
         .order_by(models.Product.name)
         .offset(skip)
         .limit(limit)
         .all()
     )
+    # Serialize to dicts for caching (SQLAlchemy objects can't be pickled safely)
+    serialized = [schemas.product.Product.model_validate(p).model_dump() for p in result]
+    cache.set_tagged(company_id, cache_key, serialized, ttl=120)
+    return result
 
 
 @router.post("/", response_model=schemas.product.Product)
@@ -87,6 +101,7 @@ def create_product(
            f"Created product '{product.name}' (#{product.article_no})", request)
     db.commit()
     db.refresh(product)
+    cache.invalidate_company(current_user.company_id)
     return product
 
 
@@ -125,6 +140,7 @@ def update_product(
     db.add(product)
     db.commit()
     db.refresh(product)
+    cache.invalidate_company(current_user.company_id)
     return product
 
 
@@ -207,4 +223,5 @@ def delete_product(
            f"Deleted product '{product.name}' (#{product.article_no})", request)
     db.delete(product)
     db.commit()
+    cache.invalidate_company(current_user.company_id)
     return {"ok": True, "deleted": product.name}

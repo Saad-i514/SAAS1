@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from app import models
 from app.api import deps
+from app.core import cache
 from datetime import datetime, timedelta
 import logging
 
@@ -72,6 +73,11 @@ def get_dashboard_summary(
         if company_id is None:
             return {**_EMPTY_SUMMARY, "timeframe": timeframe}
 
+        # ── Cache check ──────────────────────────────────────────────────────
+        cache_key, cached_val = cache.cached(company_id, 60, "dashboard_summary", timeframe, tz_offset)
+        if cached_val is not None:
+            return cached_val
+
         start = _start_date(timeframe, tz_offset)
 
         # ── Query 1: Combined Counts (One Trip) ─────────────────────────────
@@ -133,7 +139,7 @@ def get_dashboard_summary(
         profit = round(net, 2) if net > 0 else 0
         loss = round(abs(net), 2) if net < 0 else 0
 
-        return {
+        result = {
             "product_count": counts.products,
             "supplier_count": counts.suppliers,
             "sales_amount": round(total_sale_net, 2),
@@ -147,6 +153,8 @@ def get_dashboard_summary(
             "total_purchase": round(total_purchase, 2),
             "timeframe": timeframe,
         }
+        cache.set_tagged(company_id, cache_key, result, ttl=60)
+        return result
     except Exception as e:
         logger.error(f"Dashboard summary error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Dashboard error: {e}")
@@ -165,6 +173,11 @@ def get_dashboard_charts(
                 "sales_distribution": [{"name": "No Products", "value": 1}],
                 "top_products": [],
             }
+
+        # ── Cache check (5 min TTL — charts change slowly) ──────────────────
+        cache_key, cached_val = cache.cached(company_id, 300, "dashboard_charts")
+        if cached_val is not None:
+            return cached_val
 
         now = datetime.utcnow()
         # Ensure we start exactly from the beginning of the month, 11 months ago
@@ -255,7 +268,7 @@ def get_dashboard_charts(
             func.sum(models.Transaction.quantity).desc()
         ).limit(5).all()
 
-        return {
+        result = {
             "monthly_sales": monthly_sales,
             "sales_distribution": sales_distribution,
             "top_products": [
@@ -267,6 +280,8 @@ def get_dashboard_charts(
                 for r in top_products
             ],
         }
+        cache.set_tagged(company_id, cache_key, result, ttl=300)
+        return result
     except Exception as e:
         logger.error(f"Dashboard charts error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Charts error: {e}")
