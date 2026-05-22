@@ -5,6 +5,7 @@ from sqlalchemy import func, and_
 from app import models
 from app.api import deps
 from app.core import cache
+from app.utils import utc_date_to_local
 from datetime import datetime, timedelta
 import logging
 
@@ -312,7 +313,7 @@ def get_recent_transactions(
             "quantity": t.quantity,
             "debit": t.debit,
             "customer_name": t.customer_name,
-            "date": t.date.isoformat() if t.date else None,
+            "date": utc_date_to_local(t.date) if t.date else None,
             "order_no": t.order_no,
         }
         for t in transactions

@@ -9,9 +9,9 @@ from sqlalchemy import func
 from app import models, schemas
 from app.api import deps
 from app.core import cache
+from app.utils import utc_date_to_local, get_date_range
 import logging
 from datetime import datetime
-from app.utils import get_date_range
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -334,7 +334,7 @@ def get_transactions_by_customer(
 
         items.append({
             "id": tx.id,
-            "date": tx.date.isoformat() if tx.date else None,
+            "date": utc_date_to_local(tx.date) if tx.date else None,
             "type": tx.type.value if tx.type else None,
             "order_no": tx.order_no,
             "product_name": tx.product_name,

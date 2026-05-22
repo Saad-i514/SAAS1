@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app import models, schemas
 from app.api import deps
+from app.utils import utc_date_to_local
 import logging
 
 logger = logging.getLogger(__name__)
@@ -286,7 +287,7 @@ def customer_ledger(
             running_balance -= amount
         items.append({
             "id": tx.id,
-            "date": tx.date.isoformat() if tx.date else None,
+            "date": utc_date_to_local(tx.date) if tx.date else None,
             "type": tx.type.value if tx.type else None,
             "order_no": tx.order_no,
             "product_name": tx.product_name,

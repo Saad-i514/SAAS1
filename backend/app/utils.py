@@ -1,5 +1,30 @@
 from datetime import datetime, timedelta, timezone
 
+# Default PKT timezone (UTC+5)
+PKT = timezone(timedelta(hours=5))
+
+
+def utc_date_to_local(utc_dt: datetime, tz_offset_hours: int = 5) -> str:
+    """
+    Convert a naive UTC datetime to a local date string (YYYY-MM-DD).
+
+    This is the core fix for the date boundary bug:
+    - Dates in DB are stored as naive UTC datetimes (via datetime.utcnow())
+    - The business operates in PKT (UTC+5)
+    - Converting directly to YYYY-MM-DD from UTC gives wrong dates for
+      transactions recorded between 00:00-06:59 local time
+
+    Example:
+      utc_dt = datetime(2026, 5, 21, 21, 0, 0)  # 2 AM PKT on May 22
+      Returns: "2026-05-22" (not "2026-05-21")
+    """
+    if utc_dt is None:
+        return ""
+    tz = timezone(timedelta(hours=tz_offset_hours))
+    # Mark the naive datetime as UTC, then convert to local timezone
+    local_dt = utc_dt.replace(tzinfo=timezone.utc).astimezone(tz)
+    return local_dt.strftime("%Y-%m-%d")
+
 
 def get_date_range(timeframe: str, tz_offset_hours: int = 5) -> datetime:
     """

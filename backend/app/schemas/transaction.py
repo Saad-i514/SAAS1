@@ -1,7 +1,8 @@
 from typing import Optional, Union, List
-from pydantic import BaseModel, field_validator
-from datetime import datetime
+from pydantic import BaseModel, field_validator, field_serializer
+from datetime import datetime, date
 from app.models import TransactionTypeEnum
+from app.utils import utc_date_to_local
 
 class TransactionBase(BaseModel):
     transaction_id: Optional[str] = None
@@ -58,6 +59,20 @@ class TransactionInDBBase(TransactionBase):
     supplier_id: Optional[int] = None
     customer_id: Optional[int] = None
     date: datetime
+
+    @field_serializer('date')
+    def serialize_date(self, v: datetime, _info) -> str:
+        """
+        Return date as YYYY-MM-DD string in local timezone (PKT UTC+5).
+
+        CRITICAL: Dates are stored as naive UTC datetimes in the database.
+        We must convert UTC → local timezone (PKT) before extracting the
+        date portion. Otherwise transactions recorded between midnight and
+        7 AM PKT would show the WRONG date (one day earlier).
+        """
+        if v is None:
+            return None
+        return utc_date_to_local(v)
 
     class Config:
         from_attributes = True

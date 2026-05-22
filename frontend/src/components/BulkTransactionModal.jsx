@@ -21,7 +21,7 @@ const emptyItem = () => ({ product_name: '', quantity: 1, unit_price: 0, discoun
 
 function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
   const [txType, setTxType]           = useState('sale');
-  const [date, setDate]               = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate]               = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
   const [orderNo, setOrderNo]         = useState('');
   const [customerName, setCustomerName] = useState('');
   const [supplierId, setSupplierId]   = useState('');
@@ -49,7 +49,7 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
       setSuccess(false);
       // Reset form
       setTxType('sale');
-      setDate(new Date().toISOString().split('T')[0]);
+      setDate(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
       setOrderNo('');
       setCustomerName('');
       setSupplierId('');
@@ -129,7 +129,7 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
       await api.post('/transactions/bulk', {
         type: txType,
         order_no: orderNo || undefined,
-        date: date ? new Date(date).toISOString() : undefined,
+        date: date ? `${date}T12:00:00` : undefined,
         supplier_id: supplierId ? parseInt(supplierId) : null,
         customer_name: customerName || null,
         payment_term: paymentTerm,

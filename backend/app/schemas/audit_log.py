@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from datetime import datetime
 
 
@@ -14,6 +14,13 @@ class AuditLogEntry(BaseModel):
     description: Optional[str] = None
     ip_address: Optional[str] = None
     created_at: datetime
+
+    @field_serializer('created_at')
+    def serialize_created_at(self, v: datetime, _info) -> str:
+        """Return as YYYY-MM-DD to prevent browser timezone shift."""
+        if v is None:
+            return None
+        return v.strftime('%Y-%m-%d')
 
     class Config:
         from_attributes = True

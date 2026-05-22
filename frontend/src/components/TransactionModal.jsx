@@ -17,7 +17,7 @@ const colorMap = {
 function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
   const [formData, setFormData] = useState({
     type: 'sale',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
     supplier_id: '',
     product_name: initialProduct || '',
     quantity: 1,
@@ -131,7 +131,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
         debit: parseFloat(formData.debit),
         discount: parseFloat(formData.discount) || 0,
         supplier_id: formData.supplier_id ? parseInt(formData.supplier_id) : null,
-        // type is already lowercase
+        date: formData.date ? `${formData.date}T12:00:00` : undefined,
       };
       await api.post('/transactions/', payload);
       setSuccess(true);
