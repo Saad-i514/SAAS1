@@ -4,199 +4,204 @@ import { logout } from '../services/authService';
 import {
   LayoutDashboard, Users as UsersIcon, Package, LogOut,
   FileText, Building2, UserCog, Menu, X, TrendingUp,
-  ChevronRight, Bell, UserCircle, ArrowLeftRight, ShieldCheck, Sun, Moon,
+  Bell, UserCircle, ArrowLeftRight, ShieldCheck, Sun, Moon,
 } from 'lucide-react';
 import Chatbot from './Chatbot';
 import { useTheme } from '../context/ThemeContext';
+
+const NAV_ADMIN = [
+  { path: '/',             icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/suppliers',    icon: UsersIcon,        label: 'Suppliers' },
+  { path: '/products',     icon: Package,          label: 'Products' },
+  { path: '/customers',    icon: UserCircle,       label: 'Customers' },
+  { path: '/transactions', icon: ArrowLeftRight,   label: 'Transactions' },
+  { path: '/users',        icon: UserCog,          label: 'Employees' },
+  { path: '/reports',      icon: FileText,         label: 'Reports' },
+  { path: '/audit-log',    icon: ShieldCheck,      label: 'Audit Log' },
+];
+
+const NAV_OPERATOR = [
+  { path: '/',             icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/suppliers',    icon: UsersIcon,        label: 'Suppliers' },
+  { path: '/products',     icon: Package,          label: 'Products' },
+  { path: '/customers',    icon: UserCircle,       label: 'Customers' },
+  { path: '/transactions', icon: ArrowLeftRight,   label: 'Transactions' },
+];
+
+const NAV_SUPER = [
+  { path: '/', icon: Building2, label: 'Tenant Management' },
+];
+
+function NavItem({ item, active, onClick }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.path}
+      onClick={onClick}
+      className={`
+        flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150
+        ${active
+          ? 'bg-indigo-600 text-white font-medium shadow-sm'
+          : 'text-slate-400 hover:text-white hover:bg-white/5 font-normal'
+        }
+      `}
+    >
+      <Icon size={16} className="flex-shrink-0" />
+      <span>{item.label}</span>
+    </Link>
+  );
+}
 
 function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { dark, toggle } = useTheme();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Failed to parse user data:', error);
-      }
+    const raw = localStorage.getItem('user');
+    if (raw) {
+      try { setUser(JSON.parse(raw)); } catch { /* ignore */ }
     }
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
-  let navItems = [];
-  if (user?.role === 'SuperAdmin') {
-    navItems = [{ path: '/', icon: Building2, label: 'Tenant Management', color: 'text-purple-400' }];
-  } else if (user?.role === 'Admin') {
-    navItems = [
-      { path: '/', icon: LayoutDashboard, label: 'Dashboard', color: 'text-indigo-400' },
-      { path: '/suppliers', icon: UsersIcon, label: 'Suppliers', color: 'text-blue-400' },
-      { path: '/products', icon: Package, label: 'Products', color: 'text-emerald-400' },
-      { path: '/customers', icon: UserCircle, label: 'Customers', color: 'text-cyan-400' },
-      { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions', color: 'text-violet-400' },
-      { path: '/users', icon: UserCog, label: 'Employees', color: 'text-orange-400' },
-      { path: '/reports', icon: FileText, label: 'Reports', color: 'text-pink-400' },
-      { path: '/audit-log', icon: ShieldCheck, label: 'Audit Log', color: 'text-yellow-400' },
-    ];
-  } else {
-    navItems = [
-      { path: '/', icon: LayoutDashboard, label: 'Dashboard', color: 'text-indigo-400' },
-      { path: '/suppliers', icon: UsersIcon, label: 'Suppliers', color: 'text-blue-400' },
-      { path: '/products', icon: Package, label: 'Products', color: 'text-emerald-400' },
-      { path: '/customers', icon: UserCircle, label: 'Customers', color: 'text-cyan-400' },
-      { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions', color: 'text-violet-400' },
-    ];
-  }
+  const navItems =
+    user?.role === 'SuperAdmin' ? NAV_SUPER :
+    user?.role === 'Admin'      ? NAV_ADMIN :
+    NAV_OPERATOR;
 
-  const isActive = (path) => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
-  };
+  const isActive = (path) =>
+    path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
+
+  const initials = user?.email?.[0]?.toUpperCase() || 'U';
+  const companyName = user?.company?.name || 'Business Platform';
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      {/* Mobile overlay */}
-      {isSidebarOpen && (
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-[#0d0f14]">
+
+      {/* ── Mobile overlay ── */}
+      {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-black/60 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* ── Sidebar ── */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-30 w-64 flex flex-col
-        bg-slate-900 dark:bg-slate-950 border-r border-slate-800
-        transform transition-transform duration-300 ease-in-out
-        lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed lg:static inset-y-0 left-0 z-30 flex flex-col w-[220px] flex-shrink-0
+        bg-[#111318] border-r border-white/[0.06]
+        transition-transform duration-200 ease-in-out
+        lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
+
         {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-slate-800 flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <TrendingUp size={16} className="text-white" />
+        <div className="h-14 flex items-center px-4 border-b border-white/[0.06] flex-shrink-0">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <TrendingUp size={14} className="text-white" />
             </div>
-            <div>
-              <p className="text-white font-bold text-sm leading-none">BizManager</p>
-              <p className="text-slate-500 text-xs mt-0.5">Pro Edition</p>
+            <div className="min-w-0">
+              <p className="text-white text-sm font-semibold leading-none truncate">BizManager</p>
+              <p className="text-slate-500 text-[10px] mt-0.5">Pro Edition</p>
             </div>
           </div>
           <button
-            className="ml-auto lg:hidden text-slate-400 hover:text-white"
-            onClick={() => setIsSidebarOpen(false)}
+            className="lg:hidden text-slate-500 hover:text-white ml-2"
+            onClick={() => setSidebarOpen(false)}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* User info */}
-        <div className="px-4 py-4 border-b border-slate-800 flex-shrink-0">
-          <div className="flex items-center space-x-3 px-2 py-2 rounded-xl bg-slate-800/50">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {user?.email?.[0]?.toUpperCase() || 'U'}
+        {/* User chip */}
+        <div className="px-3 py-3 border-b border-white/[0.06] flex-shrink-0">
+          <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-white/[0.04]">
+            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+              {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-white text-xs font-semibold truncate">{user?.email || 'User'}</p>
-              <p className="text-slate-400 text-xs">{user?.role || 'Operator'}</p>
+              <p className="text-white text-xs font-medium truncate leading-none">{user?.email || 'User'}</p>
+              <p className="text-slate-500 text-[10px] mt-0.5">{user?.role || 'Operator'}</p>
             </div>
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <p className="text-slate-500 text-xs font-bold uppercase tracking-widest px-3 mb-3">Navigation</p>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path);
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsSidebarOpen(false)}
-                className={`
-                  flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 group
-                  ${active
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                  }
-                `}
-              >
-                <Icon size={18} className={active ? 'text-white' : item.color} />
-                <span className="font-medium text-sm flex-1">{item.label}</span>
-                {active && <ChevronRight size={14} className="text-indigo-300" />}
-              </Link>
-            );
-          })}
+        {/* Nav */}
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+          <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 mb-2">Menu</p>
+          {navItems.map((item) => (
+            <NavItem
+              key={item.path}
+              item={item}
+              active={isActive(item.path)}
+              onClick={() => setSidebarOpen(false)}
+            />
+          ))}
         </nav>
 
-        {/* Bottom actions */}
-        <div className="p-3 border-t border-slate-800 flex-shrink-0 space-y-1">
-          {/* Dark mode toggle */}
+        {/* Bottom */}
+        <div className="px-2 py-3 border-t border-white/[0.06] flex-shrink-0 space-y-0.5">
           <button
             onClick={toggle}
-            className="flex items-center space-x-3 w-full px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200"
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-all"
           >
-            {dark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-slate-400" />}
-            <span className="font-medium text-sm">{dark ? 'Light Mode' : 'Dark Mode'}</span>
+            {dark
+              ? <Sun size={16} className="text-amber-400 flex-shrink-0" />
+              : <Moon size={16} className="flex-shrink-0" />
+            }
+            <span>{dark ? 'Light Mode' : 'Dark Mode'}</span>
           </button>
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-3 w-full px-3 py-2.5 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 group"
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
           >
-            <LogOut size={18} />
-            <span className="font-medium text-sm">Sign Out</span>
+            <LogOut size={16} className="flex-shrink-0" />
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* ── Main ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top header */}
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center px-4 lg:px-6 gap-4 flex-shrink-0 z-10">
+
+        {/* Top bar */}
+        <header className="h-14 bg-white dark:bg-[#161b27] border-b border-gray-200/80 dark:border-slate-800 flex items-center px-4 gap-3 flex-shrink-0 z-10">
           <button
-            className="lg:hidden text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white transition-colors p-1"
-            onClick={() => setIsSidebarOpen(true)}
+            className="lg:hidden text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            onClick={() => setSidebarOpen(true)}
           >
-            <Menu size={22} />
+            <Menu size={20} />
           </button>
 
-          {/* Company name */}
-          <div className="flex-1 flex items-center justify-center">
-            <h1 className="text-base font-bold text-gray-900 dark:text-white tracking-tight hidden sm:block">
-              {user?.role === 'SuperAdmin'
-                ? 'Super Admin Environment'
-                : (user?.company?.name || 'Business Management System')}
-            </h1>
+          <div className="flex-1 flex items-center">
+            <span className="text-sm font-semibold text-gray-800 dark:text-white hidden sm:block">
+              {user?.role === 'SuperAdmin' ? 'Super Admin' : companyName}
+            </span>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {/* Dark mode quick toggle */}
+          <div className="flex items-center gap-1">
             <button
               onClick={toggle}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"
-              title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="btn-ghost btn btn-icon"
+              title={dark ? 'Light mode' : 'Dark mode'}
             >
-              {dark ? <Sun size={18} /> : <Moon size={18} />}
+              {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
-            <button className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
-              <Bell size={18} />
+            <button className="btn-ghost btn btn-icon relative">
+              <Bell size={16} />
             </button>
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-              {user?.email?.[0]?.toUpperCase() || 'U'}
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold ml-1">
+              {initials}
             </div>
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6 bg-slate-50 dark:bg-slate-950">
+        {/* Content */}
+        <main className="flex-1 overflow-auto p-4 lg:p-6">
           <Outlet />
           <Chatbot />
         </main>

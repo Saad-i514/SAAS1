@@ -1,110 +1,269 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
-import { Plus, Search, Edit2, Trash2, X, Activity, Package, AlertTriangle, Users, ImagePlus, Image } from 'lucide-react';
+import {
+  Plus, Search, Edit2, Trash2, X, Package,
+  AlertTriangle, Users, ImagePlus, Image as ImageIcon,
+  ShoppingCart, Activity,
+} from 'lucide-react';
 import TransactionModal from '../components/TransactionModal';
 import BulkTransactionModal from '../components/BulkTransactionModal';
 import CustomerSearchModal from '../components/CustomerSearchModal';
 
-// Common product categories — user can also type a custom one
 const PRESET_CATEGORIES = [
   'Electronics', 'Clothing', 'Food & Beverages', 'Furniture',
   'Stationery', 'Hardware', 'Cosmetics', 'Medicine', 'Toys',
   'Sports', 'Automotive', 'Books', 'Other',
 ];
 
-function Products() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+// ── Image modal ──────────────────────────────────────────────────────────────
+function ImageModal({ product, onClose, onUpdated }) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef(null);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const { data } = await api.post(`/products/${product.id}/image`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      onUpdated(data);
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const { data } = await api.delete(`/products/${product.id}/image`);
+      onUpdated(data);
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to remove image');
+    }
+  };
+
+  return (
+    <div className="modal-overlay animate-fade-in">
+      <div className="modal max-w-sm">
+        <div className="modal-header">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Product Image</h2>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{product.name}</p>
+          </div>
+          <button onClick={onClose} className="btn-ghost btn btn-icon"><X size={16} /></button>
+        </div>
+        <div className="modal-body space-y-4">
+          {product.image_url ? (
+            <div className="relative">
+              <img
+                src={product.image_url}
+                alt={product.name}
+                className="w-full h-48 object-contain rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800"
+              />
+              <button
+                onClick={handleDelete}
+                className="absolute top-2 right-2 w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center justify-center transition-all"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ) : (
+            <div className="w-full h-48 rounded-lg border-2 border-dashed border-gray-200 dark:border-slate-700 flex flex-col items-center justify-center text-gray-400 dark:text-slate-500">
+              <ImageIcon size={32} className="mb-2 opacity-40" />
+              <p className="text-xs">No image uploaded</p>
+            </div>
+          )}
+          <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleUpload} />
+          <button
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="btn btn-primary w-full"
+          >
+            {uploading
+              ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <ImagePlus size={15} />
+            }
+            {uploading ? 'Uploading…' : product.image_url ? 'Replace Image' : 'Upload Image'}
+          </button>
+          <p className="text-xs text-center text-gray-400 dark:text-slate-500">JPEG, PNG or WebP · Max 500 KB</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Product form modal ────────────────────────────────────────────────────────
+function ProductModal({ product, allCategories, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    article_no: product?.article_no || '',
+    name:        product?.name || '',
+    category:    product?.category || '',
+    product_price: product?.product_price ?? '',
+    sale_price:    product?.sale_price ?? '',
+    in_hand_qty:   product?.in_hand_qty ?? '',
+    status:        product?.status || 'Active',
+  });
+  const [customCat, setCustomCat] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const resolvedCat = form.category === '__custom__' ? customCat : form.category;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!resolvedCat) { setError('Please select or enter a category.'); return; }
+    setSaving(true); setError('');
+    try {
+      const payload = {
+        ...form,
+        category:      resolvedCat,
+        product_price: parseFloat(form.product_price) || 0,
+        sale_price:    parseFloat(form.sale_price) || 0,
+        in_hand_qty:   parseInt(form.in_hand_qty) || 0,
+      };
+      if (product) {
+        const { data } = await api.put(`/products/${product.id}`, payload);
+        onSaved(data, 'edit');
+      } else {
+        const { data } = await api.post('/products/', payload);
+        onSaved(data, 'add');
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to save product');
+    } finally { setSaving(false); }
+  };
+
+  const margin = parseFloat(form.sale_price || 0) - parseFloat(form.product_price || 0);
+  const marginPct = parseFloat(form.product_price) > 0
+    ? ((margin / parseFloat(form.product_price)) * 100).toFixed(1)
+    : null;
+
+  return (
+    <div className="modal-overlay animate-fade-in">
+      <div className="modal max-w-xl max-h-[95vh] overflow-y-auto">
+        <div className="modal-header">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+            {product ? 'Edit Product' : 'Add Product'}
+          </h2>
+          <button onClick={onClose} className="btn-ghost btn btn-icon"><X size={16} /></button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-700 dark:text-red-400">{error}</div>
+            )}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="input-label">SKU *</label>
+                <input required placeholder="ART-001" className="input" value={form.article_no} onChange={e => setForm(p => ({ ...p, article_no: e.target.value }))} />
+              </div>
+              <div className="col-span-2">
+                <label className="input-label">Product Name *</label>
+                <input required placeholder="Product name" className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="input-label">Category *</label>
+                <select required className="select" value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}>
+                  <option value="">Select category</option>
+                  {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="__custom__">+ Custom category</option>
+                </select>
+                {form.category === '__custom__' && (
+                  <input required placeholder="Category name" className="input mt-2" value={customCat} onChange={e => setCustomCat(e.target.value)} />
+                )}
+              </div>
+              <div>
+                <label className="input-label">Status</label>
+                <select className="select" value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}>
+                  <option>Active</option>
+                  <option>Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="input-label">In-Hand Qty</label>
+                <input type="number" min="0" placeholder="0" className="input" value={form.in_hand_qty} onChange={e => setForm(p => ({ ...p, in_hand_qty: e.target.value }))} />
+              </div>
+              <div>
+                <label className="input-label">Purchase Price *</label>
+                <input required type="number" min="0" step="0.01" placeholder="0.00" className="input" value={form.product_price} onChange={e => setForm(p => ({ ...p, product_price: e.target.value }))} />
+              </div>
+              <div>
+                <label className="input-label">Sale Price *</label>
+                <input required type="number" min="0" step="0.01" placeholder="0.00" className="input" value={form.sale_price} onChange={e => setForm(p => ({ ...p, sale_price: e.target.value }))} />
+              </div>
+            </div>
+            {marginPct !== null && (
+              <div className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium border ${
+                margin >= 0
+                  ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
+              }`}>
+                <span>Margin</span>
+                <span className="font-semibold tabular">Rs {margin.toFixed(2)} / unit ({marginPct}%)</span>
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            <button type="button" onClick={onClose} className="btn btn-secondary">Cancel</button>
+            <button type="submit" disabled={saving} className="btn btn-primary">
+              {saving && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {product ? 'Save Changes' : 'Create Product'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+export default function Products() {
+  const [products, setProducts]         = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [search, setSearch]             = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [modal, setModal]               = useState(null); // null | 'add' | { type:'edit', product } | { type:'image', product }
+  const [showTxModal, setShowTxModal]   = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
-  const [formData, setFormData] = useState({
-    article_no: '', name: '', category: '', product_price: '',
-    sale_price: '', in_hand_qty: '', status: 'Active'
-  });
-  const [customCategory, setCustomCategory] = useState('');
-  const [formError, setFormError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [imageModal, setImageModal] = useState(null); // product for image upload
-  const [imageUploading, setImageUploading] = useState(false);
-  const imageInputRef = useRef(null);
-  const itemsPerPage = 20;
+  const [showSearch, setShowSearch]     = useState(false);
+  const [currentPage, setCurrentPage]   = useState(1);
+  const ITEMS = 20;
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/products/');
       setProducts(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // Merge preset + existing categories from DB
   const dbCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
   const allCategories = [...new Set([...PRESET_CATEGORIES, ...dbCategories])].sort();
-  const filterCategories = ['all', ...new Set(products.map(p => p.category).filter(Boolean))];
+  const filterCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
 
-  const openModal = (product = null) => {
-    setFormError('');
-    setCustomCategory('');
-    if (product) {
-      setFormData({
-        article_no: product.article_no || '',
-        name: product.name || '',
-        category: product.category || '',
-        product_price: product.product_price ?? '',
-        sale_price: product.sale_price ?? '',
-        in_hand_qty: product.in_hand_qty ?? '',
-        status: product.status || 'Active',
-      });
-      setEditingProduct(product);
-    } else {
-      setFormData({ article_no: '', name: '', category: '', product_price: '', sale_price: '', in_hand_qty: '', status: 'Active' });
-      setEditingProduct(null);
-    }
-    setIsModalOpen(true);
+  const handleSaved = (updated, mode) => {
+    if (mode === 'edit') setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
+    else setProducts(prev => [updated, ...prev]);
+    setModal(null);
   };
 
-  // Resolve final category: if "custom" selected, use customCategory text
-  const resolvedCategory = formData.category === '__custom__' ? customCategory : formData.category;
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setFormError('');
-    if (!resolvedCategory) { setFormError('Please select or enter a category.'); return; }
-    setSubmitting(true);
-    try {
-      const payload = {
-        ...formData,
-        category: resolvedCategory,
-        product_price: parseFloat(formData.product_price) || 0,
-        sale_price: parseFloat(formData.sale_price) || 0,
-        in_hand_qty: parseInt(formData.in_hand_qty) || 0,
-      };
-      if (editingProduct) {
-        const { data } = await api.put(`/products/${editingProduct.id}`, payload);
-        setProducts(prev => prev.map(p => p.id === editingProduct.id ? data : p));
-      } else {
-        const { data } = await api.post('/products/', payload);
-        setProducts(prev => [data, ...prev]);
-      }
-      setIsModalOpen(false);
-    } catch (err) {
-      setFormError(err.response?.data?.detail || 'Failed to save product');
-    } finally {
-      setSubmitting(false);
-    }
+  const handleImageUpdated = (updated) => {
+    setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
+    setModal({ type: 'image', product: updated });
   };
 
   const handleDelete = async (id, name) => {
@@ -112,280 +271,196 @@ function Products() {
     try {
       await api.delete(`/products/${id}`);
       setProducts(prev => prev.filter(p => p.id !== id));
-    } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to delete product');
-    }
-  };
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !imageModal) return;
-    setImageUploading(true);
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      const { data } = await api.post(`/products/${imageModal.id}/image`, form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setProducts(prev => prev.map(p => p.id === data.id ? data : p));
-      setImageModal(data);
-    } catch (err) {
-      alert(err.response?.data?.detail || 'Image upload failed');
-    } finally {
-      setImageUploading(false);
-      if (imageInputRef.current) imageInputRef.current.value = '';
-    }
-  };
-
-  const handleImageDelete = async (product) => {
-    try {
-      const { data } = await api.delete(`/products/${product.id}/image`);
-      setProducts(prev => prev.map(p => p.id === data.id ? data : p));
-      setImageModal(data);
-    } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to remove image');
-    }
+    } catch (err) { alert(err.response?.data?.detail || 'Failed to delete'); }
   };
 
   const filtered = products.filter(p => {
-    const matchSearch = !search || [p.name, p.article_no, p.category].some(
-      v => String(v || '').toLowerCase().includes(search.toLowerCase())
-    );
-    const matchCat = categoryFilter === 'all' || p.category === categoryFilter;
+    const q = search.toLowerCase();
+    const matchSearch = !search || [p.name, p.article_no, p.category].some(v => String(v || '').toLowerCase().includes(q));
+    const matchCat    = categoryFilter === 'all' || p.category === categoryFilter;
     const matchStatus = statusFilter === 'all' || p.status === statusFilter;
     return matchSearch && matchCat && matchStatus;
   });
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  const lowStockCount = products.filter(p => p.in_hand_qty <= 5 && p.status === 'Active').length;
+  const totalPages = Math.ceil(filtered.length / ITEMS);
+  const paginated  = filtered.slice((currentPage - 1) * ITEMS, currentPage * ITEMS);
+  const lowStock   = products.filter(p => p.in_hand_qty <= 5 && p.status === 'Active').length;
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="page animate-fade-in">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black text-gray-900 dark:text-white">Products Inventory</h1>
-          <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5">
+          <h1 className="page-title">Products</h1>
+          <p className="page-subtitle">
             {products.length} products
-            {lowStockCount > 0 && (
-              <span className="ml-2 inline-flex items-center space-x-1 text-amber-600 font-semibold">
-                <AlertTriangle size={12} />
-                <span>{lowStockCount} low stock</span>
+            {lowStock > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                <AlertTriangle size={12} /> {lowStock} low stock
               </span>
             )}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => setShowCustomerSearch(true)}
-            className="flex items-center justify-center space-x-2 bg-purple-50 hover:bg-purple-100 text-purple-700 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all border border-purple-200">
-            <Users size={16} />
-            <span>Customer Search</span>
+          <button onClick={() => setShowSearch(true)} className="btn btn-secondary btn-sm">
+            <Users size={14} /> Customer Search
           </button>
-          <button onClick={() => setShowBulkModal(true)}
-            className="flex items-center justify-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all border border-emerald-200">
-            <Activity size={16} />
-            <span>Bulk Order</span>
+          <button onClick={() => setShowBulkModal(true)} className="btn btn-secondary btn-sm">
+            <ShoppingCart size={14} /> Bulk Order
           </button>
-          <button onClick={() => setShowTransactionModal(true)}
-            className="flex items-center justify-center space-x-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all border border-indigo-200">
-            <Activity size={16} />
-            <span>Quick Transaction</span>
+          <button onClick={() => setShowTxModal(true)} className="btn btn-secondary btn-sm">
+            <Activity size={14} /> Quick Transaction
           </button>
-          <button onClick={() => openModal()}
-            className="flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-indigo-500/20">
-            <Plus size={16} />
-            <span>Add Product</span>
+          <button onClick={() => setModal('add')} className="btn btn-primary btn-sm">
+            <Plus size={14} /> Add Product
           </button>
         </div>
       </div>
 
-      <TransactionModal isOpen={showTransactionModal} onClose={() => setShowTransactionModal(false)} onSuccess={fetchProducts} />
+      <TransactionModal isOpen={showTxModal} onClose={() => setShowTxModal(false)} onSuccess={fetchProducts} />
       <BulkTransactionModal isOpen={showBulkModal} onClose={() => setShowBulkModal(false)} onSuccess={fetchProducts} />
-      <CustomerSearchModal isOpen={showCustomerSearch} onClose={() => setShowCustomerSearch(false)} />
+      <CustomerSearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
 
-      {/* Add/Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 dark:border-slate-800">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-4 sm:p-6">
-              {formError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium">{formError}</div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Article No (SKU) *</label>
-                  <input required placeholder="ART-101" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.article_no} onChange={e => setFormData(p => ({ ...p, article_no: e.target.value }))} />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Product Name *</label>
-                  <input required placeholder="Premium Widget" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} />
-                </div>
-
-                {/* Category — required dropdown with custom option */}
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Category *</label>
-                  <select required className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                    value={formData.category} onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}>
-                    <option value="">— Select a category —</option>
-                    {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
-                    <option value="__custom__">+ Enter custom category</option>
-                  </select>
-                  {formData.category === '__custom__' && (
-                    <input required placeholder="Type category name..." className="mt-2 w-full px-3 py-2.5 bg-gray-50 border border-indigo-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                      value={customCategory} onChange={e => setCustomCategory(e.target.value)} />
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Status</label>
-                  <select className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.status} onChange={e => setFormData(p => ({ ...p, status: e.target.value }))}>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">In-Hand Qty</label>
-                  <input type="number" min="0" placeholder="0" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.in_hand_qty} onChange={e => setFormData(p => ({ ...p, in_hand_qty: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Purchase Price (Rs) *</label>
-                  <input required type="number" min="0" step="0.01" placeholder="0.00" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.product_price} onChange={e => setFormData(p => ({ ...p, product_price: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Sale Price (Rs) *</label>
-                  <input required type="number" min="0" step="0.01" placeholder="0.00" className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" value={formData.sale_price} onChange={e => setFormData(p => ({ ...p, sale_price: e.target.value }))} />
-                </div>
-                {formData.product_price && formData.sale_price && (
-                  <div className="sm:col-span-2 lg:col-span-3">
-                    <div className={`p-3 rounded-xl text-sm font-semibold flex items-center justify-between ${
-                      parseFloat(formData.sale_price) > parseFloat(formData.product_price)
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-red-50 text-red-700 border border-red-200'
-                    }`}>
-                      <span>Margin Preview</span>
-                      <span>
-                        Rs {(parseFloat(formData.sale_price) - parseFloat(formData.product_price)).toFixed(2)} per unit
-                        ({parseFloat(formData.product_price) > 0
-                          ? (((parseFloat(formData.sale_price) - parseFloat(formData.product_price)) / parseFloat(formData.product_price)) * 100).toFixed(1)
-                          : 0}%)
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-6 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:flex-1 py-3 sm:py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm transition-all">Cancel</button>
-                <button type="submit" disabled={submitting} className="w-full sm:flex-1 py-3 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold rounded-xl text-sm transition-all shadow-sm flex items-center justify-center space-x-2">
-                  {submitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-                  <span>{editingProduct ? 'Save Changes' : 'Create Product'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
+      {/* ── Filters ── */}
+      <div className="filter-bar">
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search products…"
+            className="input pl-8 py-2 text-xs"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+          />
         </div>
-      )}
+        <select
+          className="select py-2 text-xs w-auto"
+          value={categoryFilter}
+          onChange={e => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
+        >
+          <option value="all">All Categories</option>
+          {filterCategories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select
+          className="select py-2 text-xs w-auto"
+          value={statusFilter}
+          onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+        >
+          <option value="all">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Search products..." className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-              value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
-          </div>
-          <div className="flex items-center space-x-2">
-            <select className="px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-              value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setCurrentPage(1); }}>
-              {filterCategories.map(c => <option key={c} value={c}>{c === 'all' ? 'All Categories' : c}</option>)}
-            </select>
-            <select className="px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-              value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
-              <option value="all">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
-        </div>
-
+      {/* ── Table ── */}
+      <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50/80 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
-              <tr className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                <th className="px-5 py-3 text-left">Img</th>
-                <th className="px-5 py-3 text-left">Product</th>
-                <th className="px-5 py-3 text-left">Category</th>
-                <th className="px-5 py-3 text-right">Purchase Price</th>
-                <th className="px-5 py-3 text-right">Sale Price</th>
-                <th className="px-5 py-3 text-right">Margin</th>
-                <th className="px-5 py-3 text-center">Stock</th>
-                <th className="px-5 py-3 text-center">Status</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th className="w-10"></th>
+                <th>Product</th>
+                <th>Category</th>
+                <th className="text-right">Purchase</th>
+                <th className="text-right">Sale</th>
+                <th className="text-right">Margin</th>
+                <th className="text-center">Stock</th>
+                <th className="text-center">Status</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
+            <tbody>
               {loading ? (
-                [...Array(5)].map((_, i) => (
-                  <tr key={i}><td colSpan="9" className="px-5 py-4"><div className="h-8 bg-gray-100 dark:bg-slate-800 rounded-lg animate-pulse" /></td></tr>
+                [...Array(6)].map((_, i) => (
+                  <tr key={i}>
+                    <td colSpan="9" className="px-4 py-3">
+                      <div className="h-7 skeleton rounded" />
+                    </td>
+                  </tr>
                 ))
               ) : paginated.length === 0 ? (
-                <tr><td colSpan="9" className="px-5 py-16 text-center">
-                  <Package size={40} className="mx-auto text-gray-300 mb-3" />
-                  <p className="text-gray-500 dark:text-slate-400 font-medium">No products found</p>
-                </td></tr>
+                <tr>
+                  <td colSpan="9">
+                    <div className="empty-state">
+                      <div className="empty-state-icon"><Package size={20} className="text-gray-400" /></div>
+                      <p className="empty-state-title">No products found</p>
+                      <p className="empty-state-desc">Try adjusting your filters</p>
+                    </div>
+                  </td>
+                </tr>
               ) : (
                 paginated.map(p => {
-                  const margin = p.sale_price - p.product_price;
+                  const margin    = p.sale_price - p.product_price;
                   const marginPct = p.product_price > 0 ? ((margin / p.product_price) * 100).toFixed(1) : 0;
                   return (
-                    <tr key={p.id} className="hover:bg-gray-50/60 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-5 py-3.5">
-                        <button onClick={() => setImageModal(p)} className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700 flex items-center justify-center bg-gray-50 dark:bg-slate-800 hover:border-indigo-400 transition-all" title="Manage image">
-                          {p.image_url ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" /> : <Image size={16} className="text-gray-300 dark:text-slate-600" />}
+                    <tr key={p.id} className="group">
+                      <td className="px-3 py-2.5">
+                        <button
+                          onClick={() => setModal({ type: 'image', product: p })}
+                          className="w-9 h-9 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700 flex items-center justify-center bg-gray-50 dark:bg-slate-800 hover:border-indigo-400 transition-all"
+                        >
+                          {p.image_url
+                            ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                            : <ImageIcon size={14} className="text-gray-300 dark:text-slate-600" />
+                          }
                         </button>
                       </td>
-                      <td className="px-5 py-3.5">
-                        <div>
-                          <p className="font-bold text-gray-900 dark:text-white">{p.name}</p>
-                          <p className="text-xs text-gray-400 dark:text-slate-500 font-medium">{p.article_no}</p>
-                        </div>
+                      <td>
+                        <p className="font-medium text-gray-900 dark:text-white">{p.name}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 tabular">{p.article_no}</p>
                       </td>
-                      <td className="px-5 py-3.5">
-                        <span className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold">
-                          {p.category || 'Uncategorized'}
-                        </span>
+                      <td>
+                        <span className="badge badge-gray">{p.category || 'Uncategorized'}</span>
                       </td>
-                      <td className="px-5 py-3.5 text-right font-mono text-gray-600 dark:text-slate-300 font-medium">Rs {Number(p.product_price || 0).toFixed(2)}</td>
-                      <td className="px-5 py-3.5 text-right font-mono font-bold text-gray-900 dark:text-white">Rs {Number(p.sale_price || 0).toFixed(2)}</td>
-                      <td className="px-5 py-3.5 text-right">
-                        <span className={`text-xs font-bold px-2 py-1 rounded-lg ${margin > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                      <td className="text-right tabular text-gray-600 dark:text-slate-300">
+                        Rs {Number(p.product_price || 0).toFixed(2)}
+                      </td>
+                      <td className="text-right tabular font-medium text-gray-900 dark:text-white">
+                        Rs {Number(p.sale_price || 0).toFixed(2)}
+                      </td>
+                      <td className="text-right">
+                        <span className={`badge ${margin >= 0 ? 'badge-green' : 'badge-red'}`}>
                           {margin >= 0 ? '+' : ''}{marginPct}%
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <span className={`inline-flex items-center justify-center px-2.5 py-1 text-xs font-black rounded-lg ${
-                          p.in_hand_qty > 10 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-                          : p.in_hand_qty > 0 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                        }`}>{p.in_hand_qty}</span>
+                      <td className="text-center">
+                        <span className={`badge tabular ${
+                          p.in_hand_qty > 10 ? 'badge-green' :
+                          p.in_hand_qty > 0  ? 'badge-amber' :
+                          'badge-red'
+                        }`}>
+                          {p.in_hand_qty}
+                        </span>
                       </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${p.status === 'Active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400'}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${p.status === 'Active' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                      <td className="text-center">
+                        <span className={`badge ${p.status === 'Active' ? 'badge-green' : 'badge-gray'}`}>
                           {p.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setImageModal(p)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all" title="Manage image"><ImagePlus size={14} /></button>
-                          <button onClick={() => openModal(p)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all" title="Edit"><Edit2 size={14} /></button>
-                          <button onClick={() => handleDelete(p.id, p.name)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title="Delete"><Trash2 size={14} /></button>
+                      <td className="text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => setModal({ type: 'image', product: p })}
+                            className="btn-ghost btn btn-icon"
+                            title="Manage image"
+                          >
+                            <ImagePlus size={14} />
+                          </button>
+                          <button
+                            onClick={() => setModal({ type: 'edit', product: p })}
+                            className="btn-ghost btn btn-icon"
+                            title="Edit"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p.id, p.name)}
+                            className="btn-ghost btn btn-icon text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            title="Delete"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -396,54 +471,51 @@ function Products() {
           </table>
         </div>
 
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 font-medium">
-          <span>Showing {paginated.length} of {filtered.length} products</span>
+        {/* Footer */}
+        <div className="px-4 py-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+          <p className="text-xs text-gray-500 dark:text-slate-400">
+            {filtered.length} of {products.length} products
+          </p>
           {totalPages > 1 && (
-            <div className="flex items-center space-x-1">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Prev</button>
-              <span className="px-3 py-1.5 font-bold text-gray-700 dark:text-slate-300">{currentPage} / {totalPages}</span>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next</button>
+            <div className="pagination">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+                className="pagination-btn"
+              >
+                Prev
+              </button>
+              <span className="px-3 py-1.5 text-xs text-gray-600 dark:text-slate-300 font-medium">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+                className="pagination-btn"
+              >
+                Next
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Image Upload Modal */}
-      {imageModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-slate-800">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Product Image</h2>
-                <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">{imageModal.name}</p>
-              </div>
-              <button onClick={() => setImageModal(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"><X size={18} /></button>
-            </div>
-            <div className="p-6 space-y-4">
-              {imageModal.image_url ? (
-                <div className="relative">
-                  <img src={imageModal.image_url} alt={imageModal.name} className="w-full h-48 object-contain rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800" />
-                  <button onClick={() => handleImageDelete(imageModal)} className="absolute top-2 right-2 w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center justify-center transition-all" title="Remove image"><X size={14} /></button>
-                </div>
-              ) : (
-                <div className="w-full h-48 rounded-xl border-2 border-dashed border-gray-200 dark:border-slate-700 flex flex-col items-center justify-center text-gray-400 dark:text-slate-500">
-                  <Image size={40} className="mb-2 opacity-40" />
-                  <p className="text-sm font-medium">No image uploaded</p>
-                </div>
-              )}
-              <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
-              <button onClick={() => imageInputRef.current?.click()} disabled={imageUploading}
-                className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all disabled:opacity-50">
-                {imageUploading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <ImagePlus size={16} />}
-                <span>{imageUploading ? 'Uploading…' : imageModal.image_url ? 'Replace Image' : 'Upload Image'}</span>
-              </button>
-              <p className="text-xs text-center text-gray-400 dark:text-slate-500">JPEG, PNG or WebP · Max 500 KB</p>
-            </div>
-          </div>
-        </div>
+      {/* ── Modals ── */}
+      {(modal === 'add' || modal?.type === 'edit') && (
+        <ProductModal
+          product={modal?.product}
+          allCategories={allCategories}
+          onClose={() => setModal(null)}
+          onSaved={handleSaved}
+        />
+      )}
+      {modal?.type === 'image' && (
+        <ImageModal
+          product={modal.product}
+          onClose={() => setModal(null)}
+          onUpdated={handleImageUpdated}
+        />
       )}
     </div>
   );
 }
-
-export default Products;
