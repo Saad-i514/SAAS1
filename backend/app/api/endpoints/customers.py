@@ -141,7 +141,10 @@ def list_customers(
 ) -> Any:
     company_id = current_user.company_id
     if company_id is None:
-        return []
+        first = db.query(models.Company).first()
+        if not first:
+            return []
+        company_id = first.id
 
     q = db.query(models.Customer).filter(models.Customer.company_id == company_id)
     if search:
@@ -166,7 +169,10 @@ def customer_stats(
 ) -> Any:
     company_id = current_user.company_id
     if company_id is None:
-        return {}
+        first = db.query(models.Company).first()
+        if not first:
+            return {}
+        company_id = first.id
 
     total = db.query(func.count(models.Customer.id)).filter(
         models.Customer.company_id == company_id

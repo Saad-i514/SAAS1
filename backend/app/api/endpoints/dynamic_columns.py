@@ -16,8 +16,14 @@ def read_dynamic_columns(
     """
     Get all dynamic columns for the current company's tables.
     """
+    company_id = current_user.company_id
+    if company_id is None:
+        first = db.query(models.Company).first()
+        if not first:
+            return []
+        company_id = first.id
     query = db.query(models.DynamicColumn).filter(
-        models.DynamicColumn.company_id == current_user.company_id
+        models.DynamicColumn.company_id == company_id
     )
     if table_name:
         query = query.filter(models.DynamicColumn.table_name == table_name)
@@ -34,9 +40,16 @@ def create_dynamic_column(
     Add a dynamic column to a specific table. Only Admins can do this.
     We leverage PostgreSQL ALTER TABLE.
     """
+    company_id = current_admin.company_id
+    if company_id is None:
+        first = db.query(models.Company).first()
+        if not first:
+            raise HTTPException(status_code=400, detail="No company found")
+        company_id = first.id
+
     # 1. Check if column metadata already exists
     existing = db.query(models.DynamicColumn).filter(
-        models.DynamicColumn.company_id == current_admin.company_id,
+        models.DynamicColumn.company_id == company_id,
         models.DynamicColumn.table_name == column_in.table_name,
         models.DynamicColumn.column_name == column_in.column_name
     ).first()
@@ -51,7 +64,7 @@ def create_dynamic_column(
     
     # 3. Save metadata
     new_column = models.DynamicColumn(
-        company_id=current_admin.company_id,
+        company_id=company_id,
         table_name=column_in.table_name,
         column_name=column_in.column_name,
         data_type=column_in.data_type
@@ -69,9 +82,16 @@ def delete_dynamic_column(
     column_id: int,
     current_admin: models.User = Depends(deps.get_current_active_admin),
 ) -> Any:
+    company_id = current_admin.company_id
+    if company_id is None:
+        first = db.query(models.Company).first()
+        if not first:
+            raise HTTPException(status_code=400, detail="No company found")
+        company_id = first.id
+
     column = db.query(models.DynamicColumn).filter(
         models.DynamicColumn.id == column_id,
-        models.DynamicColumn.company_id == current_admin.company_id
+        models.DynamicColumn.company_id == company_id
     ).first()
     
     if not column:

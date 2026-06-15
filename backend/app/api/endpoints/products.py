@@ -44,7 +44,10 @@ def read_products(
 ) -> Any:
     company_id = current_user.company_id
     if company_id is None:
-        return []
+        first = db.query(models.Company).first()
+        if not first:
+            return []
+        company_id = first.id
 
     # Cache products list for 2 minutes — invalidated on any product write
     cache_key, cached_val = cache.cached(company_id, 120, "products_list", skip, limit)

@@ -34,7 +34,10 @@ def read_suppliers(
 ) -> Any:
     company_id = current_user.company_id
     if company_id is None:
-        return []
+        first = db.query(models.Company).first()
+        if not first:
+            return []
+        company_id = first.id
 
     # Cache suppliers list for 5 minutes
     cache_key, cached_val = cache.cached(company_id, 300, "suppliers_list", skip, limit)
