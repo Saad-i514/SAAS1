@@ -123,13 +123,19 @@ def _broadcast(company_id: int, event: dict):
 @router.get("/events")
 async def transaction_events(
     token: Optional[str] = Query(None, description="JWT token for SSE auth"),
-    db: Session = Depends(deps.get_db),
 ):
-    """SSE endpoint — subscribe to live transaction updates for this company."""
-    # Authenticate via query param token (SSE can't send headers)
+    """SSE endpoint — subscribe to live transaction updates for this company.
+
+    IMPORTANT: this stream can stay open for minutes. We must NOT hold a DB
+    connection for its lifetime (that exhausts the pooler). So we authenticate
+    with a short-lived session that is CLOSED before streaming starts.
+    """
+    from fastapi.responses import Response
     if not token:
-        from fastapi.responses import Response
         return Response(status_code=401)
+
+    from app.core.database import SessionLocal
+    db = SessionLocal()
     try:
         from jose import jwt
         from app.core.config import settings
@@ -138,21 +144,18 @@ async def transaction_events(
         token_data = _schemas.token.TokenPayload(**payload)
         user = db.query(models.User).filter(models.User.id == int(token_data.sub)).first()
         if not user or not user.is_active:
-            from fastapi.responses import Response
             return Response(status_code=401)
+        company_id = user.company_id
+        if company_id is None:  # SuperAdmin without a company: use first company
+            first = db.query(models.Company).first()
+            company_id = first.id if first else None
     except Exception:
-        from fastapi.responses import Response
         return Response(status_code=401)
+    finally:
+        db.close()  # release the connection BEFORE the long-lived stream
 
-    company_id = user.company_id
-    # SuperAdmin without a company: find first company
     if company_id is None:
-        from sqlalchemy.orm import Session as _S
-        first = db.query(models.Company).first()
-        company_id = first.id if first else None
-    if company_id is None:
-        from fastapi.responses import Response as _R
-        return _R(status_code=403)
+        return Response(status_code=403)
 
     q: asyncio.Queue = asyncio.Queue(maxsize=50)
     _sse_subscribers.setdefault(company_id, []).append(q)

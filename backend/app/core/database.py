@@ -1,23 +1,22 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import NullPool
 from app.core.config import settings
 
-# ── Serverless-aware pooling ─────────────────────────────────────────────────
-# On Vercel each warm function instance keeps its own pool, so a large pool_size
-# multiplied across instances can exhaust Postgres' max_connections. Keep the
-# per-instance pool small and lean on the DB provider's connection pooler
-# (PgBouncer / Neon-Supabase "pooled" connection string) for scale.
+# ── Serverless + external pooler (Supabase/PgBouncer) ────────────────────────
+# On Vercel, many function instances each keep their own SQLAlchemy pool. Behind
+# Supabase's pooler (capped at ~15 clients in session mode) those held
+# connections quickly exhaust the limit → "max clients reached" 500s.
 #
-# PERFORMANCE NOTE: the biggest latency win is putting the database in the SAME
-# region as the Vercel functions and using the provider's *pooled* DATABASE_URL.
-# Those are env/infra changes (no schema, no data touched) — see the summary.
+# Fix: NullPool — SQLAlchemy holds NO connections; each request opens one and
+# hands it straight back to the external pooler when done. Let Supabase's pooler
+# do the pooling. Pair this with the *transaction* pooler URL (port 6543) for
+# both scale and speed (see the deploy note). No schema/data changes.
 engine = create_engine(
     settings.DATABASE_URL,
-    pool_size=5,            # small per-instance pool (serverless-friendly)
-    max_overflow=5,         # a few extra under burst
-    pool_timeout=30,        # wait up to 30s for a connection
-    pool_recycle=300,       # recycle every 5 min (survives PgBouncer/idle drops)
-    pool_pre_ping=True,     # validate before use → no stalls on stale connections
+    poolclass=NullPool,
+    pool_pre_ping=True,
+    connect_args={"connect_timeout": 10},
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
