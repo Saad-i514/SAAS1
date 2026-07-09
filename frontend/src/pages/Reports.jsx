@@ -280,13 +280,14 @@ export default function Reports() {
                 <th className="text-right bg-blue-50/50 dark:bg-blue-900/5">Total Sale</th>
                 <th className="text-right bg-orange-50/50 dark:bg-orange-900/5">Total Cost</th>
                 <th className="text-right bg-emerald-50/50 dark:bg-emerald-900/5">Profit</th>
+                {isAdmin && <th className="text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                [...Array(5)].map((_, i) => <tr key={i}><td colSpan="9" className="px-4 py-3"><div className="h-6 skeleton rounded" /></td></tr>)
+                [...Array(5)].map((_, i) => <tr key={i}><td colSpan={isAdmin ? 10 : 9} className="px-4 py-3"><div className="h-6 skeleton rounded" /></td></tr>)
               ) : groupedByCustomer.length === 0 ? (
-                <tr><td colSpan="9">
+                <tr><td colSpan={isAdmin ? 10 : 9}>
                   <div className="empty-state">
                     <div className="empty-state-icon"><RefreshCcw size={18} className="text-gray-400" /></div>
                     <p className="empty-state-title">No sales data</p>
@@ -325,6 +326,7 @@ export default function Reports() {
                       <td className={`text-right font-semibold tabular bg-emerald-50/30 dark:bg-emerald-900/5 ${group.totalProfit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                         {group.totalProfit >= 0 ? '+' : ''}Rs {Number(group.totalProfit).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}
                       </td>
+                      {isAdmin && <td className="text-right text-xs text-gray-300 dark:text-slate-600">—</td>}
                     </tr>
                     {/* Child rows */}
                     {isExpanded && group.items.map((item, rowIdx) => {
@@ -336,23 +338,7 @@ export default function Reports() {
                               checked={isSel}
                               onChange={() => setSelectedIds(prev => prev.includes(item._idx) ? prev.filter(id => id !== item._idx) : [...prev, item._idx])} />
                           </td>
-                          <td className="font-medium text-gray-800 dark:text-slate-200 pl-10">
-                            <div className="flex items-center gap-2">
-                              <span className="max-w-[200px] truncate">{item.product_name || '—'}</span>
-                              {isAdmin && item.id != null && (
-                                <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => setEditItem(item)} title="Edit"
-                                    className="p-1 rounded text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20">
-                                    <Pencil size={12} />
-                                  </button>
-                                  <button onClick={() => setDeleteItem(item)} title="Delete"
-                                    className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
-                                    <Trash2 size={12} />
-                                  </button>
-                                </span>
-                              )}
-                            </div>
-                          </td>
+                          <td className="font-medium text-gray-800 dark:text-slate-200 pl-10 max-w-[200px] truncate">{item.product_name || '—'}</td>
                           <td><span className="badge badge-gray">{item.category || '—'}</span></td>
                           <td className="text-gray-500 dark:text-slate-400 tabular">{item.date ? fmtDateShort(item.date) : '—'}</td>
                           <td className="text-center font-medium tabular">{item.quantity}</td>
@@ -362,6 +348,24 @@ export default function Reports() {
                           <td className={`text-right tabular font-medium bg-emerald-50/20 dark:bg-emerald-900/5 ${item.profit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                             {item.profit >= 0 ? '+' : ''}Rs {Number(item.profit||0).toFixed(2)}
                           </td>
+                          {isAdmin && (
+                            <td className="text-right whitespace-nowrap">
+                              {item.id != null ? (
+                                <div className="flex items-center justify-end gap-1">
+                                  <button onClick={() => setEditItem(item)} title="Edit sale"
+                                    className="p-1.5 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors">
+                                    <Pencil size={13} />
+                                  </button>
+                                  <button onClick={() => setDeleteItem(item)} title="Delete sale"
+                                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-gray-300 dark:text-slate-600">—</span>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
