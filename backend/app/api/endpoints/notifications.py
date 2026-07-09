@@ -160,18 +160,28 @@ def _get_recent_transactions_today(db: Session, company_id: int) -> list:
 # Cron endpoint — called by Vercel Cron
 # ---------------------------------------------------------------------------
 
-@router.post("/daily-summary")
+@router.api_route("/daily-summary", methods=["GET", "POST"])
 async def send_daily_summary_cron(
+    authorization: str = Header(None),
     x_cron_secret: str = Header(None, alias="x-cron-secret"),
     db: Session = Depends(deps.get_db),
 ) -> Any:
     """
     Triggered by Vercel Cron at 23:55 PKT (18:55 UTC) every day.
     Sends end-of-day summary email to NOTIFY_EMAIL for every active company.
-    Secured with X-Cron-Secret header.
+
+    Vercel Cron makes a GET request with `Authorization: Bearer <CRON_SECRET>`
+    (auto-injected when a CRON_SECRET env var is set). We accept that, and also
+    a manual `x-cron-secret` header for testing.
     """
-    # Validate cron secret
-    if not settings.CRON_SECRET or x_cron_secret != settings.CRON_SECRET:
+    # Extract the secret from either Vercel's Bearer header or the manual header.
+    provided = None
+    if authorization and authorization.lower().startswith("bearer "):
+        provided = authorization[7:].strip()
+    elif x_cron_secret:
+        provided = x_cron_secret
+
+    if not settings.CRON_SECRET or provided != settings.CRON_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     if not settings.RESEND_API_KEY:
