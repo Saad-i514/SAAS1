@@ -32,8 +32,8 @@ const features = [
     icon: ShieldCheck,
     label: 'Full Audit Trail',
     desc: 'Every action logged with user, time & IP',
-    color: 'from-purple-500/20 to-purple-600/10',
-    iconColor: 'text-purple-300',
+    color: 'from-[#d6c9b0]/20 to-[#b39a72]/10',
+    iconColor: 'text-[#e7dcc6]',
   },
 ];
 
@@ -67,16 +67,16 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-950">
+    <div className="min-h-screen flex bg-[#0f0d0b]">
 
       {/* ── Left Panel ─────────────────────────────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-[52%] flex-col justify-between p-12 bg-gradient-to-br from-slate-900 via-violet-950 to-violet-950 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-[52%] flex-col justify-between p-12 bg-gradient-to-br from-[#1c1714] via-[#17130f] to-[#0f0d0b] relative overflow-hidden">
 
-        {/* Ambient blobs */}
+        {/* Ambient blobs — warm cream glow */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-32 -right-32 w-[500px] h-[500px] bg-violet-600/15 rounded-full blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-purple-600/15 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-violet-500/5 rounded-full blur-3xl" />
+          <div className="absolute -top-32 -right-32 w-[500px] h-[500px] bg-[#d6c9b0]/[0.10] rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-[#b39a72]/[0.10] rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-[#efe6d4]/[0.04] rounded-full blur-3xl" />
           {/* Grid overlay */}
           <div className="absolute inset-0 opacity-[0.03]"
             style={{ backgroundImage: 'linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
@@ -84,25 +84,25 @@ function Login() {
 
         {/* Logo */}
         <div className="relative z-10 flex items-center space-x-3">
-          <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/30">
-            <TrendingUp size={20} className="text-white" />
+          <div className="w-10 h-10 bg-[#efe6d4] rounded-xl flex items-center justify-center shadow-lg shadow-black/30">
+            <TrendingUp size={20} className="text-[#1c1815]" />
           </div>
           <div>
             <span className="text-white font-black text-lg tracking-tight">BizManager</span>
-            <span className="ml-1.5 text-xs font-bold text-violet-400 bg-violet-500/20 px-2 py-0.5 rounded-full border border-violet-500/30">PRO</span>
+            <span className="ml-1.5 text-xs font-bold text-[#e7dcc6] bg-[#efe6d4]/15 px-2 py-0.5 rounded-full border border-[#efe6d4]/25">PRO</span>
           </div>
         </div>
 
         {/* Hero text */}
         <div className="relative z-10 space-y-10">
           <div className="space-y-4">
-            <div className="inline-flex items-center space-x-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-4 py-1.5">
+            <div className="inline-flex items-center space-x-2 bg-[#efe6d4]/10 border border-[#efe6d4]/20 rounded-full px-4 py-1.5">
               <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-              <span className="text-violet-300 text-xs font-semibold tracking-wide uppercase">Enterprise Business Platform</span>
+              <span className="text-[#e7dcc6] text-xs font-semibold tracking-wide uppercase">Enterprise Business Platform</span>
             </div>
             <h1 className="text-5xl font-black text-white leading-[1.1] tracking-tight">
               Run your business<br />
-              <span className="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#f5efe2] to-[#c9bca3] bg-clip-text text-transparent">
                 smarter, faster.
               </span>
             </h1>
@@ -149,14 +149,14 @@ function Login() {
       </div>
 
       {/* ── Right Panel ────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-16 bg-white">
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-16 bg-[#faf6ee]">
 
         <div className="w-full max-w-sm">
 
           {/* Mobile logo */}
           <div className="flex items-center space-x-3 mb-10 lg:hidden">
-            <div className="w-9 h-9 bg-violet-600 rounded-xl flex items-center justify-center">
-              <TrendingUp size={18} className="text-white" />
+            <div className="w-9 h-9 bg-[#1c1815] rounded-xl flex items-center justify-center">
+              <TrendingUp size={18} className="text-[#efe6d4]" />
             </div>
             <span className="text-gray-900 font-black text-lg">BizManager Pro</span>
           </div>

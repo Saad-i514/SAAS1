@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { Plus, X, Layers, Trash2 } from 'lucide-react';
 
@@ -8,7 +8,7 @@ function DynamicColumnManager({ tableName, onColumnAdded }) {
     const [formData, setFormData] = useState({ table_name: tableName, column_name: '', data_type: 'string' });
     const [loading, setLoading] = useState(true);
 
-    const fetchColumns = async () => {
+    const fetchColumns = useCallback(async () => {
         try {
             const { data } = await api.get(`/dynamic-columns/?table_name=${tableName}`);
             setColumns(data);
@@ -17,11 +17,11 @@ function DynamicColumnManager({ tableName, onColumnAdded }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [tableName]);
 
     useEffect(() => {
         fetchColumns();
-    }, [tableName]);
+    }, [fetchColumns]);
 
     const handleAdd = async (e) => {
         e.preventDefault();

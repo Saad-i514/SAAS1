@@ -1,4 +1,21 @@
 /** @type {import('tailwindcss').Config} */
+
+// Warm ink → cream ramp. Black + cream visual identity: every accent utility
+// (violet-/indigo-/purple-/brand-) is remapped onto this single scale.
+const ink = {
+  50:  '#f7f2e8',
+  100: '#efe6d4',
+  200: '#e3d7c0',
+  300: '#cdbda0',
+  400: '#a89a80',
+  500: '#6f6353',
+  600: '#2a241d',
+  700: '#1c1815',
+  800: '#14110e',
+  900: '#100d0b',
+  950: '#0a0806',
+};
+
 export default {
   darkMode: 'class',
   content: [
@@ -8,18 +25,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50:  '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-        },
+        ink,
+        violet: ink,
+        indigo: ink,
+        purple: ink,
+        brand: ink,
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],

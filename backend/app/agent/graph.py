@@ -13,15 +13,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 from langgraph.graph.message import add_messages
 
-from app.agent.tools import (
-    get_dashboard_summary,
-    get_summary_by_date,
-    get_products,
-    get_suppliers,
-    get_recent_transactions,
-    search_customer_transactions,
-    get_top_products,
-)
+from app.agent.tools import build_company_tools
 
 logger = logging.getLogger(__name__)
 
@@ -159,15 +151,9 @@ def build_agent(
     Uses Ollama cloud gpt-oss:120b via OpenAI-compatible /v1 endpoint.
     Endpoint: https://ollama.com/v1/chat/completions
     """
-    tools = [
-        get_dashboard_summary,
-        get_summary_by_date,
-        get_products,
-        get_suppliers,
-        get_recent_transactions,
-        search_customer_transactions,
-        get_top_products,
-    ]
+    # Tools are bound to this company_id via closures — the LLM never sees or
+    # supplies company_id, so prompt injection cannot cross tenant boundaries.
+    tools = build_company_tools(company_id)
 
     # Ollama cloud via OpenAI-compatible /v1 endpoint
     # Works with: https://ollama.com/v1/chat/completions + Bearer token
@@ -238,12 +224,12 @@ I'm your intelligent business assistant. Here's what I can do for you:
 
 **Your company**: {company_name}
 **Your role**: {user_role}
-**Company ID**: {company_id}
 **Timezone**: PKT (UTC+5) — all date calculations use this timezone
 
 {APP_GUIDE}
 
-When using database tools, ALWAYS pass company_id={company_id} to ensure your data stays isolated from other companies.
+All database tools are automatically scoped to your company — you never need to
+specify a company. Only ever discuss THIS company's data.
 """
 
     def call_model(state: AgentState):

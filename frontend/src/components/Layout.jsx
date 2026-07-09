@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { logout } from '../services/authService';
 import {
@@ -7,7 +7,7 @@ import {
   Bell, UserCircle, ArrowLeftRight, ShieldCheck, Sun, Moon,
 } from 'lucide-react';
 import Chatbot from './Chatbot';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/theme-context';
 
 const NAV_ADMIN = [
   { path: '/',             icon: LayoutDashboard, label: 'Dashboard' },
@@ -41,8 +41,8 @@ function NavItem({ item, active, onClick }) {
       className={`
         flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150
         ${active
-          ? 'bg-violet-600 text-white font-medium shadow-sm'
-          : 'text-slate-400 hover:text-white hover:bg-white/5 font-normal'
+          ? 'bg-[#efe6d4] text-[#1c1815] font-semibold shadow-sm'
+          : 'text-stone-400 hover:text-white hover:bg-white/5 font-normal'
         }
       `}
     >
@@ -80,7 +80,10 @@ function Layout() {
   const companyName = user?.company?.name || 'Business Platform';
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-[#0d0f14]">
+    <div className="relative flex h-screen overflow-hidden bg-gradient-to-br from-[#f7f2e8] via-[#f1eadc] to-[#f4eee1] dark:from-[#131110] dark:via-[#15120f] dark:to-[#100e0c]">
+
+      {/* Ambient aurora backdrop for the glass surfaces */}
+      <div className="app-aurora" aria-hidden="true" />
 
       {/* ── Mobile overlay ── */}
       {sidebarOpen && (
@@ -93,7 +96,7 @@ function Layout() {
       {/* ── Sidebar ── */}
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-30 flex flex-col w-[220px] flex-shrink-0
-        bg-[#111318] border-r border-white/[0.06]
+        bg-[#17130f] border-r border-white/[0.06]
         transition-transform duration-200 ease-in-out
         lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
@@ -101,8 +104,8 @@ function Layout() {
         {/* Logo */}
         <div className="h-14 flex items-center px-4 border-b border-white/[0.06] flex-shrink-0">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="w-7 h-7 bg-violet-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <TrendingUp size={14} className="text-white" />
+            <div className="w-7 h-7 bg-[#efe6d4] rounded-lg flex items-center justify-center flex-shrink-0">
+              <TrendingUp size={14} className="text-[#1c1815]" />
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-semibold leading-none truncate">BizManager</p>
@@ -120,7 +123,7 @@ function Layout() {
         {/* User chip */}
         <div className="px-3 py-3 border-b border-white/[0.06] flex-shrink-0">
           <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-white/[0.04]">
-            <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-[#efe6d4] flex items-center justify-center text-[#1c1815] text-xs font-semibold flex-shrink-0">
               {initials}
             </div>
             <div className="min-w-0 flex-1">
@@ -166,10 +169,10 @@ function Layout() {
       </aside>
 
       {/* ── Main ── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="relative z-10 flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        {/* Top bar */}
-        <header className="h-14 bg-white dark:bg-[#161b27] border-b border-gray-200/80 dark:border-slate-800 flex items-center px-4 gap-3 flex-shrink-0 z-10">
+        {/* Top bar — frosted */}
+        <header className="h-14 bg-white/70 dark:bg-[#0f1119]/70 backdrop-blur-xl border-b border-white/60 dark:border-white/[0.06] flex items-center px-4 gap-3 flex-shrink-0 z-10">
           <button
             className="lg:hidden text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
             onClick={() => setSidebarOpen(true)}
@@ -194,15 +197,23 @@ function Layout() {
             <button className="btn-ghost btn btn-icon relative">
               <Bell size={16} />
             </button>
-            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center text-white text-xs font-semibold ml-1">
+            <div className="w-8 h-8 rounded-lg bg-[#1c1815] dark:bg-[#efe6d4] flex items-center justify-center text-[#f5efe2] dark:text-[#1c1815] text-xs font-semibold ml-1">
               {initials}
             </div>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
-          <Outlet />
+        <main className="flex-1 overflow-auto p-4 lg:p-6 bg-transparent">
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-24">
+                <div className="w-6 h-6 border-2 border-violet-500/30 border-t-violet-600 rounded-full animate-spin" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
           <Chatbot />
         </main>
       </div>

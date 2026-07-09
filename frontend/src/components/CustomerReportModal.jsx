@@ -131,19 +131,19 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
         <html><head><title>Business Report - ${companyName}</title>
         <style>
           body { font-family: system-ui, sans-serif; color: #111; padding: 24px; font-size: 13px; }
-          .header { text-align: center; border-bottom: 3px solid #4f46e5; padding-bottom: 16px; margin-bottom: 24px; }
-          .header h1 { font-size: 24px; margin: 0 0 4px 0; color: #4f46e5; }
+          .header { text-align: center; border-bottom: 3px solid #1c1815; padding-bottom: 16px; margin-bottom: 24px; }
+          .header h1 { font-size: 24px; margin: 0 0 4px 0; color: #1c1815; }
           .header .phone { font-size: 14px; color: #666; font-weight: 600; }
           h2 { font-size: 18px; margin: 20px 0 8px 0; color: #111; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
-          .report-info { background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #4f46e5; }
-          .report-info h3 { margin: 0 0 8px 0; font-size: 16px; color: #4f46e5; }
+          .report-info { background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #1c1815; }
+          .report-info h3 { margin: 0 0 8px 0; font-size: 16px; color: #1c1815; }
           .report-info .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 12px; }
           .report-info .stat { text-align: center; }
           .report-info .stat strong { display: block; font-size: 11px; color: #6b7280; text-transform: uppercase; }
           .report-info .stat span { display: block; font-size: 20px; font-weight: 800; color: #111; margin-top: 4px; }
           table { border-collapse: collapse; width: 100%; margin-bottom: 24px; font-size: 12px; }
           th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
-          th { background: #4f46e5; color: white; font-weight: 600; font-size: 11px; }
+          th { background: #1c1815; color: white; font-weight: 600; font-size: 11px; }
           tr:nth-child(even) { background: #f9fafb; }
           .footer { text-align: center; margin-top: 32px; padding-top: 16px; border-top: 2px solid #e5e7eb; color: #999; font-size: 11px; }
           @media print { body { padding: 16px; } }
@@ -234,19 +234,19 @@ function CustomerReportModal({ isOpen, onClose, currentTimeframe = 'all' }) {
       <html><head><title>Customer Report - ${reportData.customer_name}</title>
       <style>
         body { font-family: system-ui, sans-serif; color: #111; padding: 24px; font-size: 13px; }
-        .header { text-align: center; border-bottom: 3px solid #4f46e5; padding-bottom: 16px; margin-bottom: 24px; }
-        .header h1 { font-size: 24px; margin: 0 0 4px 0; color: #4f46e5; }
+        .header { text-align: center; border-bottom: 3px solid #1c1815; padding-bottom: 16px; margin-bottom: 24px; }
+        .header h1 { font-size: 24px; margin: 0 0 4px 0; color: #1c1815; }
         .header .phone { font-size: 14px; color: #666; font-weight: 600; }
         h2 { font-size: 18px; margin: 20px 0 8px 0; color: #111; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
-        .customer-info { background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #4f46e5; }
-        .customer-info h3 { margin: 0 0 8px 0; font-size: 16px; color: #4f46e5; }
+        .customer-info { background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #1c1815; }
+        .customer-info h3 { margin: 0 0 8px 0; font-size: 16px; color: #1c1815; }
         .customer-info .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px; }
         .customer-info .stat { text-align: center; }
         .customer-info .stat strong { display: block; font-size: 11px; color: #6b7280; text-transform: uppercase; }
         .customer-info .stat span { display: block; font-size: 20px; font-weight: 800; color: #111; margin-top: 4px; }
         table { border-collapse: collapse; width: 100%; margin-bottom: 24px; }
         th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
-        th { background: #4f46e5; color: white; font-weight: 600; font-size: 12px; }
+        th { background: #1c1815; color: white; font-weight: 600; font-size: 12px; }
         tr:nth-child(even) { background: #f9fafb; }
         .footer { text-align: center; margin-top: 32px; padding-top: 16px; border-top: 2px solid #e5e7eb; color: #999; font-size: 11px; }
         @media print { body { padding: 16px; } }

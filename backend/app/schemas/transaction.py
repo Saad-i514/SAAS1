@@ -51,7 +51,30 @@ class TransactionCreate(TransactionBase):
     add_to_stock: Optional[bool] = False
 
 class TransactionUpdate(BaseModel):
-    pass
+    """Editable fields for an existing transaction. All optional (partial update)."""
+    product_name: Optional[str] = None
+    quantity: Optional[int] = None
+    unit_price: Optional[float] = None
+    discount: Optional[float] = None
+    customer_name: Optional[str] = None
+    payment_term: Optional[str] = None
+    order_no: Optional[str] = None
+    supplier_id: Optional[int] = None
+    date: Optional[datetime] = None
+
+    @field_validator('quantity', mode='before')
+    @classmethod
+    def qty_non_negative(cls, v):
+        if v is not None and int(v) < 0:
+            raise ValueError('Quantity cannot be negative')
+        return v
+
+    @field_validator('unit_price', 'discount', mode='before')
+    @classmethod
+    def amount_non_negative(cls, v):
+        if v is not None and float(v) < 0:
+            raise ValueError('Amount cannot be negative')
+        return v
 
 class TransactionInDBBase(TransactionBase):
     id: int

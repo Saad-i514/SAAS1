@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Download, FileSpreadsheet, Package, Users, Activity,
   RefreshCcw, Printer, FileDown, BarChart2, ShoppingBag,
-  ChevronDown, ChevronRight, User,
+  ChevronDown, ChevronRight, User, Pencil, Trash2,
 } from 'lucide-react';
 import api from '../services/api';
 import CustomerReportModal from '../components/CustomerReportModal';
+import EditTransactionModal from '../components/EditTransactionModal';
 import { fmtDateShort } from '../services/dateUtils';
 
 const TIMEFRAMES = [
@@ -31,6 +32,11 @@ export default function Reports() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [expandedCustomers, setExpandedCustomers]   = useState(new Set());
+  const [editItem, setEditItem]     = useState(null);
+  const [deleteItem, setDeleteItem] = useState(null);
+
+  const userRole = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').role; } catch { return ''; } })();
+  const isAdmin  = userRole === 'Admin' || userRole === 'SuperAdmin';
 
   const groupedByCustomer = useMemo(() => {
     const { items = [] } = reportData || {};
@@ -65,6 +71,26 @@ export default function Reports() {
   }, [timeframe]);
 
   useEffect(() => { if (viewMode === 'sales') fetchReportData(); }, [timeframe, viewMode, fetchReportData]);
+
+  // Normalize a report row into the shape EditTransactionModal expects.
+  const toEditable = (item) => ({
+    id: item.id,
+    type: 'sale',
+    product_name: item.product_name,
+    quantity: item.quantity,
+    unit_price: item.unit_sale_price,
+    discount: item.discount || 0,
+    customer_name: item.customer_name,
+    payment_term: item.payment_term,
+    order_no: item.order_no,
+    date: item.date,
+  });
+
+  const handleDeleteBill = async (id) => {
+    try { await api.delete(`/transactions/${id}`); await fetchReportData(); }
+    catch (e) { alert(e.response?.data?.detail || 'Delete failed'); }
+    setDeleteItem(null);
+  };
 
   const downloadCSV = async (type) => {
     try {
@@ -107,9 +133,9 @@ export default function Reports() {
         rows = data.map(t => { tq+=t.quantity||0; const a=t.debit||0; if(t.type==='sale')ts+=a; else if(t.type==='purchase')tp+=a; return [t.date?fmtDateShort(t.date):'—',(t.type||'—').toUpperCase(),t.product_name||'—',t.quantity||0,(t.unit_price||0).toFixed(2),(t.discount||0).toFixed(2),a.toFixed(2),t.order_no||'—']; });
         summary = `${data.length} transactions | Items: ${tq} | Sales: Rs ${ts.toLocaleString()} | Purchases: Rs ${tp.toLocaleString()}`;
       }
-      autoTable(doc, { startY: 36, head: [cols], body: rows, theme: 'striped', headStyles: { fillColor: [79,70,229], fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248,250,252] } });
+      autoTable(doc, { startY: 36, head: [cols], body: rows, theme: 'striped', headStyles: { fillColor: [28,24,20], fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248,250,252] } });
       const y = doc.lastAutoTable.finalY + 10;
-      doc.setFontSize(8); doc.setTextColor(79,70,229); doc.text('Summary: ', 14, y+5);
+      doc.setFontSize(8); doc.setTextColor(28,24,20); doc.text('Summary: ', 14, y+5);
       doc.setTextColor(60); doc.text(summary, 40, y+5);
       doc.save(`${type}_report_${localDateStamp()}.pdf`);
     } catch (err) { console.error(err); alert('Failed to generate PDF'); }
@@ -124,7 +150,7 @@ export default function Reports() {
     const totals = toPrint.reduce((a,i) => ({ qty: a.qty+(i.quantity||0), sales: a.sales+(i.total_sale_price||0), cost: a.cost+(i.total_cost_price||0), profit: a.profit+(i.profit||0) }), {qty:0,sales:0,cost:0,profit:0});
     const rows = toPrint.map(i => `<tr><td>${i.date?fmtDateShort(i.date):'—'}</td><td>${i.product_name||'—'}</td><td>${i.category||'—'}</td><td style="text-align:center">${i.quantity||0}</td><td style="text-align:right">Rs ${(i.unit_sale_price||0).toFixed(2)}</td><td style="text-align:right">Rs ${(i.total_sale_price||0).toFixed(2)}</td><td style="text-align:right">Rs ${(i.total_cost_price||0).toFixed(2)}</td><td style="text-align:right;color:${i.profit>=0?'#059669':'#dc2626'}">Rs ${(i.profit||0).toFixed(2)}</td></tr>`).join('');
     const win = window.open('','_blank');
-    win.document.write(`<html><head><title>Sales Report</title><style>body{font-family:system-ui,sans-serif;padding:24px;font-size:13px;color:#111}.header{text-align:center;border-bottom:3px solid #4f46e5;padding-bottom:16px;margin-bottom:24px}.header h1{font-size:22px;margin:0;color:#4f46e5}table{border-collapse:collapse;width:100%;margin-bottom:24px}th,td{border:1px solid #e5e7eb;padding:8px 12px;text-align:left}th{background:#4f46e5;color:white;font-size:11px}tr:nth-child(even){background:#f9fafb}.summary{background:#f3f4f6;border:2px solid #4f46e5;border-radius:8px;padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;text-align:center}.summary strong{display:block;font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px}.summary span{font-size:18px;font-weight:800}.footer{text-align:center;margin-top:32px;padding-top:16px;border-top:2px solid #e5e7eb;color:#999;font-size:11px}@media print{body{padding:16px}}</style></head><body><div class="header"><h1>${company}</h1></div><h2>Sales Performance Report</h2><table><thead><tr><th>Date</th><th>Product</th><th>Category</th><th>Qty</th><th>Unit Price</th><th>Total Sale</th><th>Total Cost</th><th>Profit</th></tr></thead><tbody>${rows}</tbody></table><div class="summary"><div><strong>Items Sold</strong><span>${totals.qty} units</span></div><div><strong>Total Sales</strong><span>Rs ${totals.sales.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div><div><strong>Total Cost</strong><span>Rs ${totals.cost.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div><div><strong>Net Profit</strong><span style="color:${totals.profit>=0?'#059669':'#dc2626'}">Rs ${totals.profit.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div></div><div class="footer"><p>Generated by ${company} · ${new Date().toLocaleString()}</p></div><script>window.onload=()=>{setTimeout(()=>{window.print();},400);}<\/script></body></html>`);
+    win.document.write(`<html><head><title>Sales Report</title><style>body{font-family:system-ui,sans-serif;padding:24px;font-size:13px;color:#111}.header{text-align:center;border-bottom:3px solid #1c1815;padding-bottom:16px;margin-bottom:24px}.header h1{font-size:22px;margin:0;color:#1c1815}table{border-collapse:collapse;width:100%;margin-bottom:24px}th,td{border:1px solid #e5e7eb;padding:8px 12px;text-align:left}th{background:#1c1815;color:white;font-size:11px}tr:nth-child(even){background:#f9fafb}.summary{background:#f3f4f6;border:2px solid #1c1815;border-radius:8px;padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;text-align:center}.summary strong{display:block;font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px}.summary span{font-size:18px;font-weight:800}.footer{text-align:center;margin-top:32px;padding-top:16px;border-top:2px solid #e5e7eb;color:#999;font-size:11px}@media print{body{padding:16px}}</style></head><body><div class="header"><h1>${company}</h1></div><h2>Sales Performance Report</h2><table><thead><tr><th>Date</th><th>Product</th><th>Category</th><th>Qty</th><th>Unit Price</th><th>Total Sale</th><th>Total Cost</th><th>Profit</th></tr></thead><tbody>${rows}</tbody></table><div class="summary"><div><strong>Items Sold</strong><span>${totals.qty} units</span></div><div><strong>Total Sales</strong><span>Rs ${totals.sales.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div><div><strong>Total Cost</strong><span>Rs ${totals.cost.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div><div><strong>Net Profit</strong><span style="color:${totals.profit>=0?'#059669':'#dc2626'}">Rs ${totals.profit.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div></div><div class="footer"><p>Generated by ${company} · ${new Date().toLocaleString()}</p></div><script>window.onload=()=>{setTimeout(()=>{window.print();},400);}</script></body></html>`);
     win.document.close();
   };
 
@@ -304,13 +330,29 @@ export default function Reports() {
                     {isExpanded && group.items.map((item, rowIdx) => {
                       const isSel = selectedIds.includes(item._idx);
                       return (
-                        <tr key={item._idx} className={`border-t border-gray-50 dark:border-slate-800/60 transition-colors ${isSel ? 'bg-violet-50/20 dark:bg-violet-900/5' : rowIdx % 2 === 0 ? '' : 'bg-gray-50/30 dark:bg-slate-800/20'}`}>
+                        <tr key={item._idx} className={`group border-t border-gray-50 dark:border-slate-800/60 transition-colors ${isSel ? 'bg-violet-50/20 dark:bg-violet-900/5' : rowIdx % 2 === 0 ? '' : 'bg-gray-50/30 dark:bg-slate-800/20'}`}>
                           <td className="text-center pl-8">
                             <input type="checkbox" className="w-3.5 h-3.5 rounded text-violet-600 border-gray-300 cursor-pointer"
                               checked={isSel}
                               onChange={() => setSelectedIds(prev => prev.includes(item._idx) ? prev.filter(id => id !== item._idx) : [...prev, item._idx])} />
                           </td>
-                          <td className="font-medium text-gray-800 dark:text-slate-200 max-w-[200px] truncate pl-10">{item.product_name || '—'}</td>
+                          <td className="font-medium text-gray-800 dark:text-slate-200 pl-10">
+                            <div className="flex items-center gap-2">
+                              <span className="max-w-[200px] truncate">{item.product_name || '—'}</span>
+                              {isAdmin && item.id != null && (
+                                <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => setEditItem(item)} title="Edit"
+                                    className="p-1 rounded text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20">
+                                    <Pencil size={12} />
+                                  </button>
+                                  <button onClick={() => setDeleteItem(item)} title="Delete"
+                                    className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    <Trash2 size={12} />
+                                  </button>
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td><span className="badge badge-gray">{item.category || '—'}</span></td>
                           <td className="text-gray-500 dark:text-slate-400 tabular">{item.date ? fmtDateShort(item.date) : '—'}</td>
                           <td className="text-center font-medium tabular">{item.quantity}</td>
@@ -337,6 +379,33 @@ export default function Reports() {
       </div>
 
       <CustomerReportModal isOpen={showCustomerSearch} onClose={() => setShowCustomerSearch(false)} currentTimeframe={timeframe} />
+
+      {/* Edit a bill line */}
+      <EditTransactionModal
+        isOpen={!!editItem}
+        transaction={editItem ? toEditable(editItem) : null}
+        onClose={() => setEditItem(null)}
+        onSuccess={fetchReportData}
+      />
+
+      {/* Delete confirm */}
+      {deleteItem && (
+        <div className="modal-overlay animate-fade-in">
+          <div className="modal max-w-sm p-6 text-center">
+            <div className="w-11 h-11 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={18} className="text-red-600" />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Delete this sale?</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-5">
+              {deleteItem.product_name || 'Item'} · Qty {deleteItem.quantity}. Stock and customer/supplier balances will be restored automatically.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteItem(null)} className="btn btn-secondary flex-1">Cancel</button>
+              <button onClick={() => handleDeleteBill(deleteItem.id)} className="btn btn-danger flex-1">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -40,7 +40,11 @@ export default function AuditLog() {
     } finally { setLoading(false); }
   }, [action, resource, userEmail, page]);
 
-  useEffect(() => { load(); }, [load]);
+  // Debounce so typing in the filters doesn't fire a request per keystroke.
+  useEffect(() => {
+    const t = setTimeout(load, 350);
+    return () => clearTimeout(t);
+  }, [load]);
 
   const sorted = sortDir === 'desc' ? [...logs] : [...logs].reverse();
   const clearFilters = () => { setAction(''); setResource(''); setUserEmail(''); setPage(0); };

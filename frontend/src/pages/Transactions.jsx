@@ -3,9 +3,10 @@ import api from '../services/api';
 import {
   Search, X, Trash2, ChevronDown, ChevronUp,
   Download, RefreshCw, TrendingUp, ShoppingCart,
-  RotateCcw, CreditCard, Package, ArrowLeftRight,
+  RotateCcw, CreditCard, Package, ArrowLeftRight, Pencil,
 } from 'lucide-react';
 import { fmtDateShort } from '../services/dateUtils';
+import EditTransactionModal from '../components/EditTransactionModal';
 
 const TX_TYPES = ['all', 'sale', 'purchase', 'return', 'reverse', 'payment'];
 const TIMEFRAMES = [
@@ -38,6 +39,7 @@ export default function Transactions() {
   const [sortField, setSortField] = useState('date');
   const [sortDir, setSortDir]   = useState('desc');
   const [deleteId, setDeleteId] = useState(null);
+  const [editTx, setEditTx]     = useState(null);
   const [page, setPage]         = useState(0);
   const PAGE = 50;
 
@@ -57,7 +59,12 @@ export default function Transactions() {
     finally { setLoading(false); }
   }, [timeframe, txType, search, orderNo, page]);
 
-  useEffect(() => { load(); }, [load]);
+  // Debounce so typing in the search/order-no fields doesn't fire an API call
+  // per keystroke (each hits the slow serverless backend).
+  useEffect(() => {
+    const t = setTimeout(load, 350);
+    return () => clearTimeout(t);
+  }, [load]);
 
   const handleDelete = async (id) => {
     try { await api.delete(`/transactions/${id}`); load(); }
@@ -239,7 +246,7 @@ export default function Transactions() {
                         <span className="flex items-center gap-1">{l}<SortIcon f={f} /></span>
                       </th>
                     ))}
-                    {isAdmin && <th className="text-right">Del</th>}
+                    {isAdmin && <th className="text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -276,12 +283,24 @@ export default function Transactions() {
                         </td>
                         {isAdmin && (
                           <td className="text-right">
-                            <button
-                              onClick={() => setDeleteId(tx.id)}
-                              className="btn-ghost btn btn-icon opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              {tx.product_name && (
+                                <button
+                                  onClick={() => setEditTx(tx)}
+                                  title="Edit"
+                                  className="btn-ghost btn btn-icon opacity-0 group-hover:opacity-100 text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20"
+                                >
+                                  <Pencil size={13} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setDeleteId(tx.id)}
+                                title="Delete"
+                                className="btn-ghost btn btn-icon opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -314,7 +333,7 @@ export default function Transactions() {
               <Trash2 size={18} className="text-red-600" />
             </div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Delete Transaction?</h3>
-            <p className="text-xs text-gray-500 dark:text-slate-400 mb-5">This cannot be undone. Stock levels will not be reversed.</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-5">Stock levels and customer/supplier balances will be automatically restored.</p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteId(null)} className="btn btn-secondary flex-1">Cancel</button>
               <button onClick={() => handleDelete(deleteId)} className="btn btn-danger flex-1">Delete</button>
@@ -322,6 +341,14 @@ export default function Transactions() {
           </div>
         </div>
       )}
+
+      {/* ── Edit modal ── */}
+      <EditTransactionModal
+        isOpen={!!editTx}
+        transaction={editTx}
+        onClose={() => setEditTx(null)}
+        onSuccess={load}
+      />
     </div>
   );
 }

@@ -220,6 +220,78 @@ def _apply_inventory(
             product.in_hand_qty += quantity
 
 
+def _reverse_transaction_effects(db: Session, tx: models.Transaction) -> None:
+    """
+    Undo the inventory and ledger effects a transaction originally applied.
+    Used when deleting or editing a transaction so stock counts and
+    customer/supplier balances stay consistent. Best-effort and guarded so
+    balances/stock never go negative.
+    """
+    company_id = tx.company_id
+    qty = tx.quantity or 0
+    debit = round(tx.debit or 0.0, 2)
+    tx_type = tx.type
+
+    # ── Inventory ────────────────────────────────────────────────────────────
+    if tx.product_name and qty:
+        product = db.query(models.Product).filter(
+            models.Product.name == tx.product_name,
+            models.Product.company_id == company_id,
+        ).first()
+        if product:
+            if tx_type == models.TransactionTypeEnum.SALE:
+                # Sale had removed stock → restore it
+                product.in_hand_qty += qty
+            elif tx_type in (
+                models.TransactionTypeEnum.PURCHASE,
+                models.TransactionTypeEnum.REVERSE,
+            ):
+                # Purchase/Reverse had added stock → remove it (never below 0)
+                product.in_hand_qty = max(0, product.in_hand_qty - qty)
+            # RETURN is left untouched: whether it added to stock depended on a
+            # per-transaction flag that is not persisted, so we cannot safely undo it.
+            db.add(product)
+
+    # ── Customer balance ─────────────────────────────────────────────────────
+    if tx.customer_name or tx.customer_id:
+        customer = None
+        if tx.customer_id:
+            customer = db.query(models.Customer).filter(
+                models.Customer.id == tx.customer_id,
+                models.Customer.company_id == company_id,
+            ).first()
+        elif tx.customer_name:
+            customer = db.query(models.Customer).filter(
+                models.Customer.company_id == company_id,
+                models.Customer.name.ilike(tx.customer_name),
+            ).first()
+        if customer:
+            if tx_type == models.TransactionTypeEnum.SALE:
+                customer.outstanding_balance = round(max(0.0, (customer.outstanding_balance or 0.0) - debit), 2)
+                customer.total_purchased = round(max(0.0, (customer.total_purchased or 0.0) - debit), 2)
+            elif tx_type == models.TransactionTypeEnum.PAYMENT:
+                customer.outstanding_balance = round((customer.outstanding_balance or 0.0) + debit, 2)
+                customer.total_paid = round(max(0.0, (customer.total_paid or 0.0) - debit), 2)
+            elif tx_type == models.TransactionTypeEnum.RETURN:
+                customer.outstanding_balance = round((customer.outstanding_balance or 0.0) + debit, 2)
+            db.add(customer)
+
+    # ── Supplier balance ─────────────────────────────────────────────────────
+    if tx.supplier_id:
+        supplier = db.query(models.Supplier).filter(
+            models.Supplier.id == tx.supplier_id,
+            models.Supplier.company_id == company_id,
+        ).first()
+        if supplier:
+            if tx_type == models.TransactionTypeEnum.PURCHASE:
+                supplier.outstanding_balance = round(max(0.0, (supplier.outstanding_balance or 0.0) - debit), 2)
+                supplier.total_purchased = round(max(0.0, (supplier.total_purchased or 0.0) - debit), 2)
+            elif tx_type == models.TransactionTypeEnum.PAYMENT:
+                supplier.outstanding_balance = round((supplier.outstanding_balance or 0.0) + debit, 2)
+                supplier.total_paid = round(max(0.0, (supplier.total_paid or 0.0) - debit), 2)
+            db.add(supplier)
+
+
 def _normalize_transaction_date(tx_date: Optional[datetime], tz_offset_hours: int) -> datetime:
     """
     Store selected calendar dates as naive UTC datetimes.
@@ -711,6 +783,104 @@ def create_bulk_order(
 
 # ── Delete ────────────────────────────────────────────────────────────────────
 
+@router.put("/{transaction_id}", response_model=schemas.transaction.Transaction)
+def update_transaction(
+    transaction_id: int,
+    transaction_in: schemas.transaction.TransactionUpdate,
+    db: Session = Depends(deps.get_db),
+    request: Request = None,
+    tz_offset: int = Query(5, description="Client UTC offset in hours"),
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Edit an existing transaction. Reverses the original inventory/ledger effects,
+    applies the new values, and re-applies effects atomically so stock and
+    balances stay consistent. Admins only.
+    """
+    if current_user.role not in [models.RoleEnum.ADMIN, models.RoleEnum.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only admins can edit transactions")
+
+    transaction = db.query(models.Transaction).filter(
+        models.Transaction.id == transaction_id,
+        models.Transaction.company_id == current_user.company_id,
+    ).first()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    update_data = transaction_in.model_dump(exclude_unset=True)
+    if not update_data:
+        return transaction
+
+    try:
+        # 1) Undo the original effects on stock / customer / supplier
+        _reverse_transaction_effects(db, transaction)
+
+        # 2) Apply the edited field values
+        if "date" in update_data:
+            transaction.date = _normalize_transaction_date(update_data.pop("date"), tz_offset)
+        for field, value in update_data.items():
+            setattr(transaction, field, value)
+
+        # 3) Recompute the net amount server-side (client value is never trusted).
+        #    Only product bills are qty×price based; payments keep their stored
+        #    amount (their debit is the payment value, not a line total).
+        qty = transaction.quantity or 0
+        unit_price = transaction.unit_price or 0
+        discount = transaction.discount or 0
+        if transaction.product_name and qty:
+            if discount > qty * unit_price:
+                raise HTTPException(status_code=400, detail="Discount cannot exceed the total amount")
+            transaction.debit = round(max(0.0, qty * unit_price - discount), 2)
+
+        # 4) Re-apply inventory for the new values (raises on insufficient stock)
+        if transaction.product_name and qty:
+            product = db.query(models.Product).filter(
+                models.Product.name == transaction.product_name,
+                models.Product.company_id == current_user.company_id,
+            ).first()
+            if not product and transaction.type in (
+                models.TransactionTypeEnum.SALE,
+                models.TransactionTypeEnum.PURCHASE,
+            ):
+                raise HTTPException(status_code=404, detail=f"Product '{transaction.product_name}' not found")
+            if product:
+                _apply_inventory(db, product, transaction.type, qty, False)
+                db.add(product)
+
+        # 5) Re-apply customer / supplier ledger for the new values
+        prev_credit, curr_credit = _update_customer_balance(
+            db, current_user.company_id,
+            transaction.customer_name, transaction.customer_id,
+            transaction.type, transaction.debit,
+        )
+        transaction.previous_credit = prev_credit
+        transaction.current_credit = curr_credit
+        _update_supplier_balance(
+            db, current_user.company_id, transaction.supplier_id,
+            transaction.type, transaction.debit,
+        )
+
+        _audit(db, current_user, "UPDATE", "transaction", transaction_id,
+               f"Edited {transaction.type.value if transaction.type else '?'} transaction "
+               f"#{transaction_id} — {transaction.product_name or 'payment'} "
+               f"qty={qty} amount=Rs{transaction.debit:.2f}",
+               request)
+        db.add(transaction)
+        db.commit()
+        db.refresh(transaction)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Transaction update failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update transaction")
+
+    cache.invalidate_company(current_user.company_id)
+    _broadcast(current_user.company_id, {"type": "transaction_updated", "id": transaction_id})
+    return transaction
+
+
 @router.delete("/{transaction_id}")
 def delete_transaction(
     transaction_id: int,
@@ -728,12 +898,22 @@ def delete_transaction(
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
-    _audit(db, current_user, "DELETE", "transaction", transaction_id,
-           f"Deleted {transaction.type.value if transaction.type else '?'} transaction "
-           f"#{transaction_id} — {transaction.product_name or 'payment'} "
-           f"Rs{transaction.debit:.2f}",
-           request)
-    db.delete(transaction)
-    db.commit()
+    try:
+        # Undo inventory + ledger effects before removing the row
+        _reverse_transaction_effects(db, transaction)
+
+        _audit(db, current_user, "DELETE", "transaction", transaction_id,
+               f"Deleted {transaction.type.value if transaction.type else '?'} transaction "
+               f"#{transaction_id} — {transaction.product_name or 'payment'} "
+               f"Rs{transaction.debit:.2f} (stock & balances restored)",
+               request)
+        db.delete(transaction)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Transaction delete failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete transaction")
+
     cache.invalidate_company(current_user.company_id)
-    return {"ok": True}
+    _broadcast(current_user.company_id, {"type": "transaction_deleted", "id": transaction_id})
+    return {"ok": True, "restored": True}

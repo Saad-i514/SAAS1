@@ -4,17 +4,36 @@ import warnings
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _is_production() -> bool:
+    """True on a real production deployment (Vercel prod or explicit ENVIRONMENT)."""
+    if os.getenv("VERCEL_ENV", "").lower() == "production":
+        return True
+    if os.getenv("ENVIRONMENT", os.getenv("ENV", "")).lower() in ("production", "prod"):
+        return True
+    return False
+
+
 def _get_secret_key() -> str:
     key = os.getenv("SECRET_KEY", "")
-    if not key:
-        import logging
-        logging.warning(
-            "⚠️ SECRET_KEY not set! Using temporary key. "
-            "Set SECRET_KEY in Vercel environment variables for production. "
-            "Generate with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+    if key:
+        return key
+
+    # In production a missing key is fatal: an ephemeral per-instance key would
+    # silently invalidate everyone's JWT on every cold start. Fail loudly instead
+    # of shipping a broken auth setup. (No database access here — config only.)
+    if _is_production():
+        raise RuntimeError(
+            "SECRET_KEY is not set in this production environment. "
+            "Set it in your Vercel (or host) environment variables — generate one with: "
+            "python -c \"import secrets; print(secrets.token_urlsafe(32))\""
         )
-        return secrets.token_urlsafe(32)
-    return key
+
+    import logging
+    logging.warning(
+        "⚠️ SECRET_KEY not set — using a temporary key (dev/preview only). "
+        "Tokens will not survive a restart. Set SECRET_KEY for production."
+    )
+    return secrets.token_urlsafe(32)
 
 
 class Settings(BaseSettings):

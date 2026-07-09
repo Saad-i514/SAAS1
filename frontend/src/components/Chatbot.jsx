@@ -65,9 +65,9 @@ function MessageBubble({ msg, onRevert }) {
       <div className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 shadow-sm text-sm leading-relaxed
         ${isUser
           ? 'bg-violet-600 text-white rounded-tr-none'
-          : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none'
+          : 'bg-white dark:bg-[#221d18] border border-gray-100 dark:border-white/10 text-gray-800 dark:text-slate-200 rounded-tl-none'
         }
-        ${msg.isError ? 'bg-red-50 border-red-200 text-red-700' : ''}
+        ${msg.isError ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300' : ''}
       `}>
         {msg.isImage && (
           <div className="flex items-center space-x-1.5 text-xs opacity-75 mb-1.5">
@@ -135,9 +135,9 @@ function ScannedDataCard({ data, onConfirm, onDiscard, loading }) {
   ];
 
   return (
-    <div className="bg-white border border-indigo-100 rounded-2xl shadow-md p-4 w-full">
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
-        <div className="flex items-center space-x-2 text-violet-700 font-bold">
+    <div className="bg-white dark:bg-[#221d18] border border-indigo-100 dark:border-white/10 rounded-2xl shadow-md p-4 w-full">
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100 dark:border-white/10">
+        <div className="flex items-center space-x-2 text-violet-700 dark:text-[#e7dcc6] font-bold">
           <CheckCircle size={16} />
           <span className="text-sm capitalize">{data.record_type} Data Extracted</span>
         </div>
@@ -188,10 +188,10 @@ function ScannedDataCard({ data, onConfirm, onDiscard, loading }) {
                 value={val}
                 onChange={e => handleChange(key, e.target.value)}
                 placeholder={isRequired ? `Required` : 'Optional'}
-                className={`w-full bg-gray-50 border rounded-lg px-2.5 py-1.5 text-sm outline-none transition-all
+                className={`w-full bg-gray-50 dark:bg-white/[0.04] text-gray-900 dark:text-slate-100 border rounded-lg px-2.5 py-1.5 text-sm outline-none transition-all
                   ${isRequired && isEmpty
-                    ? 'border-red-300 focus:ring-2 focus:ring-red-500/20 focus:border-red-400'
-                    : 'border-gray-200 focus:ring-2 focus:ring-violet-500/20 focus:border-indigo-400'
+                    ? 'border-red-300 dark:border-red-800 focus:ring-2 focus:ring-red-500/20 focus:border-red-400'
+                    : 'border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-violet-500/20 focus:border-indigo-400'
                   }`}
               />
             </div>
@@ -235,7 +235,7 @@ function ScannedDataCard({ data, onConfirm, onDiscard, loading }) {
 function TypingIndicator() {
   return (
     <div className="flex justify-start">
-      <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center space-x-1.5">
+      <div className="bg-white dark:bg-[#221d18] border border-gray-100 dark:border-white/10 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center space-x-1.5">
         {[0, 1, 2].map(i => (
           <span
             key={i}
@@ -284,7 +284,7 @@ function Chatbot() {
           text: `Hi! I'm your **${botName}** 🤖\n\nHere's what I can do:\n\n- 📊 **Answer business questions** — ask about sales, profits, stock, customers, suppliers\n- 📸 **Scan images** — upload an invoice or receipt and I'll extract the data for you\n- 🗺️ **Guide you** — ask how to use any feature of the app\n\nI only work with your business data and will always ask for your confirmation before saving anything.\n\nHow can I help you today?`,
         }]);
       }
-    } catch (_) {}
+    } catch { /* ignore */ }
   }, []);
 
   // Focus input when chat opens
@@ -433,7 +433,7 @@ function Chatbot() {
     if (pendingScan?.pending_id) {
       try {
         await api.delete(`/agent/pending/${pendingScan.pending_id}`);
-      } catch (_) {}
+      } catch { /* ignore */ }
     }
     setPendingScan(null);
     addMessage({ type: 'bot', text: 'Scan discarded. No data was saved.' });
@@ -479,8 +479,6 @@ function Chatbot() {
     setPendingScan(null);
   };
 
-  const unreadCount = 0; // Could track unread if needed
-
   return (
     <>
       {/* Floating button */}
@@ -498,7 +496,7 @@ function Chatbot() {
 
       {/* Chat window */}
       <div
-        className={`fixed bottom-24 right-6 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100
+        className={`fixed bottom-24 right-6 w-80 sm:w-96 bg-[#faf6ee] dark:bg-[#1a1613] rounded-2xl shadow-2xl border border-gray-100 dark:border-white/10
           flex flex-col overflow-hidden transition-all duration-300 z-50 origin-bottom-right
           ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}
         style={{ height: '560px', maxHeight: 'calc(100vh - 130px)' }}
@@ -530,7 +528,7 @@ function Chatbot() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-gray-50/40">
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-gray-50/40 dark:bg-black/20">
           {messages.map(msg => (
             <MessageBubble key={msg.id} msg={msg} onRevert={handleRevert} />
           ))}
@@ -538,12 +536,12 @@ function Chatbot() {
           {/* Scanning indicator */}
           {isScanning && (
             <div className="flex justify-start">
-              <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
+              <div className="bg-white dark:bg-[#221d18] border border-gray-100 dark:border-white/10 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Loader2 size={14} className="animate-spin text-indigo-500" />
-                  <span className="text-xs font-semibold text-gray-600">Scanning image with Mistral AI...</span>
+                  <Loader2 size={14} className="animate-spin text-indigo-500 dark:text-[#c9bca3]" />
+                  <span className="text-xs font-semibold text-gray-600 dark:text-slate-300">Scanning image with Mistral AI...</span>
                 </div>
-                <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="w-48 h-1.5 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full bg-violet-500 rounded-full animate-pulse w-2/3" />
                 </div>
               </div>
@@ -569,8 +567,8 @@ function Chatbot() {
         </div>
 
         {/* Input area */}
-        <div className="flex-shrink-0 p-3 bg-white border-t border-gray-100">
-          <div className="flex items-end space-x-2 bg-gray-50 border border-gray-200 rounded-2xl px-2 py-1.5
+        <div className="flex-shrink-0 p-3 bg-white dark:bg-[#1a1613] border-t border-gray-100 dark:border-white/10">
+          <div className="flex items-end space-x-2 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/10 rounded-2xl px-2 py-1.5
             focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-violet-500/10 transition-all shadow-inner">
             {/* Image upload button */}
             <label
@@ -597,7 +595,7 @@ function Chatbot() {
               placeholder="Ask anything about your business..."
               rows={1}
               disabled={isLoading || isScanning}
-              className="flex-1 bg-transparent border-none focus:outline-none text-sm text-gray-800 placeholder-gray-400 resize-none py-1 max-h-24 overflow-y-auto"
+              className="flex-1 bg-transparent border-none focus:outline-none text-sm text-gray-800 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 resize-none py-1 max-h-24 overflow-y-auto"
               style={{ lineHeight: '1.5' }}
             />
 

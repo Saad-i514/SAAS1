@@ -36,7 +36,7 @@ export function useRealtimeUpdates(onUpdate, enabled = true) {
           if (data.type !== 'connected') {
             onUpdateRef.current?.(data);
           }
-        } catch (_) {}
+        } catch { /* ignore malformed SSE payload */ }
       };
 
       es.onerror = () => {

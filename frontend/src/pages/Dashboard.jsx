@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import api from '../services/api';
 import { useRealtimeUpdates } from '../services/useRealtimeUpdates';
+import { useTheme } from '../context/theme-context';
 import { fmtDateShort } from '../services/dateUtils';
 import {
   TrendingUp, TrendingDown, ShoppingCart, RotateCcw,
@@ -15,18 +16,19 @@ import {
 import BulkTransactionModal from '../components/BulkTransactionModal';
 import CustomerSearchModal from '../components/CustomerSearchModal';
 
-/* ── Design tokens ─────────────────────────────────────────────────────────── */
+/* ── Design tokens — warm ink + cream monochrome ──────────────────────────── */
 const C = {
-  violet:  '#7c3aed',
-  slate:   '#64748b',
-  emerald: '#059669',
-  rose:    '#e11d48',
-  amber:   '#d97706',
-  blue:    '#2563eb',
-  teal:    '#0d9488',
-  pink:    '#db2777',
+  ink:     '#1c1815',
+  ink2:    '#3a332a',
+  taupe:   '#7a7063',
+  sand:    '#a99c88',
+  cream:   '#d6c9b0',
+  emerald: '#3f7d5a',   // muted positive (semantic only)
+  rose:    '#a6432e',   // muted negative (semantic only)
+  amber:   '#a9762a',   // muted warning (semantic only)
 };
-const PIE_COLORS = [C.violet, C.blue, C.teal, C.pink, C.amber, C.emerald];
+// Monochrome ink→cream ramp for categorical charts
+const PIE_COLORS = ['#1c1815', '#4a433b', '#7a7063', '#a99c88', '#c9bca3', '#ded2bb'];
 
 const TIMEFRAMES = [
   { key: 'daily',   label: 'Today' },
@@ -45,42 +47,37 @@ const fmtK  = (v) => {
 };
 
 /* ── KPI Card ──────────────────────────────────────────────────────────────── */
-function KpiCard({ title, value, sub, icon: Icon, color = 'violet', featured = false }) {
-  const palette = {
-    violet:  { ring: 'ring-violet-500/20',  bg: 'bg-violet-50  dark:bg-violet-900/15', text: 'text-violet-600 dark:text-violet-400',  grad: 'from-violet-600 to-violet-700' },
-    emerald: { ring: 'ring-emerald-500/20', bg: 'bg-emerald-50 dark:bg-emerald-900/15',text: 'text-emerald-600 dark:text-emerald-400', grad: 'from-emerald-500 to-teal-600' },
-    rose:    { ring: 'ring-rose-500/20',    bg: 'bg-rose-50    dark:bg-rose-900/15',   text: 'text-rose-600 dark:text-rose-400',       grad: 'from-rose-500 to-red-600' },
-    blue:    { ring: 'ring-blue-500/20',    bg: 'bg-blue-50    dark:bg-blue-900/15',   text: 'text-blue-600 dark:text-blue-400',       grad: 'from-blue-500 to-blue-700' },
-    amber:   { ring: 'ring-amber-500/20',   bg: 'bg-amber-50   dark:bg-amber-900/15',  text: 'text-amber-600 dark:text-amber-500',     grad: 'from-amber-500 to-orange-500' },
-  };
-  const p = palette[color] || palette.violet;
+function KpiCard({ title, value, sub, icon: Icon, featured = false }) {
+  // Chips are warm-neutral; the featured tile is always solid ink (cream text).
+  const chipBg   = 'bg-[#efe6d4] dark:bg-white/[0.06]';
+  const chipText = 'text-[#3a332a] dark:text-[#e7dcc6]';
+  const p = { bg: chipBg, text: chipText, grad: 'from-[#2a241d] to-[#14110e]' };
 
   if (featured) {
     return (
-      <div className={`rounded-xl p-5 flex flex-col gap-3 bg-gradient-to-br ${p.grad} text-white`}
-           style={{ boxShadow: '0 4px 20px -4px rgba(124,58,237,0.35)' }}>
-        <div className="flex items-center justify-between">
-          <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center">
-            <Icon size={18} className="text-white" />
+      <div className={`glass-accent lift p-5 flex flex-col gap-3 bg-gradient-to-br ${p.grad}`}>
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/25">
+            <Icon size={19} className="text-white" />
           </div>
         </div>
-        <div>
-          <p className="text-white/65 text-xs font-medium uppercase tracking-wide">{title}</p>
-          <p className="text-white text-[26px] font-bold tabular leading-tight mt-1">{value}</p>
-          {sub && <p className="text-white/55 text-xs mt-1.5">{sub}</p>}
+        <div className="relative z-10">
+          <p className="text-white/70 text-[11px] font-semibold uppercase tracking-widest">{title}</p>
+          <p className="text-white text-[28px] font-bold tabular leading-tight mt-1 drop-shadow-sm">{value}</p>
+          {sub && <p className="text-white/60 text-xs mt-1.5">{sub}</p>}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="card p-5 flex flex-col gap-3">
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${p.bg}`}>
-        <Icon size={17} className={p.text} />
+    <div className="glass-card lift p-5 flex flex-col gap-3">
+      <div className={`glass-chip w-10 h-10 ${p.bg}`}>
+        <Icon size={18} className={p.text} />
       </div>
       <div>
-        <p className="text-gray-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wide">{title}</p>
-        <p className="text-gray-900 dark:text-white text-[22px] font-bold tabular leading-tight mt-1">{value}</p>
+        <p className="text-gray-500 dark:text-slate-400 text-[11px] font-semibold uppercase tracking-widest">{title}</p>
+        <p className="text-gray-900 dark:text-white text-[24px] font-bold tabular leading-tight mt-1">{value}</p>
         {sub && <p className="text-gray-400 dark:text-slate-500 text-xs mt-1">{sub}</p>}
       </div>
     </div>
@@ -89,8 +86,8 @@ function KpiCard({ title, value, sub, icon: Icon, color = 'violet', featured = f
 
 function SkeletonKpi() {
   return (
-    <div className="card p-5 space-y-3 animate-pulse">
-      <div className="w-9 h-9 skeleton rounded-lg" />
+    <div className="glass-card p-5 space-y-3 animate-pulse">
+      <div className="w-10 h-10 skeleton rounded-xl" />
       <div className="space-y-2">
         <div className="h-2.5 skeleton rounded w-16" />
         <div className="h-7 skeleton rounded w-24" />
@@ -149,6 +146,14 @@ export default function Dashboard() {
   const [showBulk, setShowBulk]       = useState(false);
   const [showSearch, setShowSearch]   = useState(false);
   const requestSeqRef = useRef(0);
+  const { dark } = useTheme();
+
+  // Theme-aware monochrome chart palette (dark inks on light, cream tints on dark)
+  const chart = dark
+    ? { ink: '#efe6d4', ink2: '#c9bca3', sand: '#5a5140', grid: 'rgba(242,234,219,0.08)', axis: '#857a68',
+        ramp: ['#efe6d4', '#c9bca3', '#9a8f7e', '#6f6653', '#4a4235', '#37301f'] }
+    : { ink: '#1c1815', ink2: '#3a332a', sand: '#c9bca3', grid: '#e7ddca', axis: '#9a8f7e',
+        ramp: PIE_COLORS };
 
   const fetchData = useCallback(async () => {
     const requestId = requestSeqRef.current + 1;
@@ -218,7 +223,7 @@ export default function Dashboard() {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="page-title">Business Overview</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Business Overview</h1>
           <p className="page-subtitle flex items-center gap-2">
             {error ? <span className="text-red-500">Failed to load</span>
               : lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}`
@@ -240,12 +245,12 @@ export default function Dashboard() {
           <button onClick={fetchData} disabled={loading} className="btn btn-secondary btn-icon">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
-          <div className="flex items-center bg-white dark:bg-[#181c27] border border-gray-200 dark:border-slate-700 rounded-lg p-0.5">
+          <div className="flex items-center glass rounded-xl p-0.5">
             {TIMEFRAMES.map(tf => (
               <button key={tf.key} onClick={() => setTimeframe(tf.key)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   timeframe === tf.key
-                    ? 'bg-violet-600 text-white shadow-sm'
+                    ? 'bg-[#1c1815] text-[#f5efe2] dark:bg-[#efe6d4] dark:text-[#1c1815] shadow-sm'
                     : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
                 }`}>
                 {tf.label}
@@ -292,14 +297,14 @@ export default function Dashboard() {
       {!loading && summary && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { label: 'Products',   value: fmt(summary?.product_count),    icon: Boxes,         color: 'text-violet-600 dark:text-violet-400',  bg: 'bg-violet-50 dark:bg-violet-900/15' },
-            { label: 'Suppliers',  value: fmt(summary?.supplier_count),   icon: Users,         color: 'text-blue-600 dark:text-blue-400',      bg: 'bg-blue-50 dark:bg-blue-900/15' },
-            { label: 'Low Stock',  value: fmt(summary?.low_stock_count),  icon: AlertTriangle, color: (summary?.low_stock_count||0)>0 ? 'text-amber-600 dark:text-amber-500' : 'text-gray-400', bg: (summary?.low_stock_count||0)>0 ? 'bg-amber-50 dark:bg-amber-900/15' : 'bg-gray-100 dark:bg-slate-800' },
-            { label: 'Purchases',  value: fmtRs(summary?.total_purchase), icon: Activity,      color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/15' },
+            { label: 'Products',   value: fmt(summary?.product_count),    icon: Boxes,         color: 'text-[#3a332a] dark:text-[#e7dcc6]', bg: '' },
+            { label: 'Suppliers',  value: fmt(summary?.supplier_count),   icon: Users,         color: 'text-[#3a332a] dark:text-[#e7dcc6]', bg: '' },
+            { label: 'Low Stock',  value: fmt(summary?.low_stock_count),  icon: AlertTriangle, color: (summary?.low_stock_count||0)>0 ? 'text-amber-700 dark:text-amber-500' : 'text-[#3a332a] dark:text-[#e7dcc6]', bg: (summary?.low_stock_count||0)>0 ? 'bg-amber-100/60 dark:bg-amber-900/15' : '' },
+            { label: 'Purchases',  value: fmtRs(summary?.total_purchase), icon: Activity,      color: 'text-[#3a332a] dark:text-[#e7dcc6]', bg: '' },
           ].map(({ label, value, icon: Icon, color, bg }) => (
-            <div key={label} className="card px-4 py-3.5 flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${bg}`}>
-                <Icon size={15} className={color} />
+            <div key={label} className="glass-card lift px-4 py-3.5 flex items-center gap-3">
+              <div className={`glass-chip w-9 h-9 flex-shrink-0 ${bg}`}>
+                <Icon size={16} className={color} />
               </div>
               <div>
                 <p className="text-[11px] text-gray-500 dark:text-slate-400 uppercase tracking-wide font-medium">{label}</p>
@@ -314,15 +319,15 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* Revenue — ComposedChart: bars + line */}
-        <div className="card lg:col-span-2">
+        <div className="glass-card lg:col-span-2">
           <div className="card-header">
             <div>
               <p className="section-title">Revenue Trend</p>
               <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">12-month sales vs purchases</p>
             </div>
             <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-slate-500">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm inline-block" style={{background:C.violet}} />Sales</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm inline-block" style={{background:'#cbd5e1'}} />Purchases</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm inline-block" style={{background:chart.ink}} />Sales</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm inline-block" style={{background:chart.sand}} />Purchases</span>
             </div>
           </div>
           <div className="p-4 h-[260px]">
@@ -332,17 +337,17 @@ export default function Dashboard() {
                 <ComposedChart data={charts.monthly_sales} margin={{ top: 4, right: 4, left: -8, bottom: 0 }} barGap={2}>
                   <defs>
                     <linearGradient id="barSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor={C.violet} stopOpacity={1} />
-                      <stop offset="100%" stopColor={C.violet} stopOpacity={0.7} />
+                      <stop offset="0%"   stopColor={chart.ink} stopOpacity={1} />
+                      <stop offset="100%" stopColor={chart.ink2} stopOpacity={0.85} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#e2e8f0" className="dark:stroke-slate-800" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={fmtK} width={42} />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(124,58,237,0.04)' }} />
+                  <CartesianGrid strokeDasharray="2 4" vertical={false} stroke={chart.grid} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 11 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 11 }} tickFormatter={fmtK} width={42} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: dark ? 'rgba(242,234,219,0.06)' : 'rgba(28,24,20,0.05)' }} />
                   <Bar dataKey="sales" name="Sales" fill="url(#barSales)" radius={[4,4,0,0]} maxBarSize={28} />
-                  <Bar dataKey="purchases" name="Purchases" fill="#cbd5e1" radius={[4,4,0,0]} maxBarSize={28} />
-                  <Line type="monotone" dataKey="sales" stroke={C.violet} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: C.violet }} legendType="none" />
+                  <Bar dataKey="purchases" name="Purchases" fill={chart.sand} radius={[4,4,0,0]} maxBarSize={28} />
+                  <Line type="monotone" dataKey="sales" stroke={chart.ink} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: chart.ink }} legendType="none" />
                 </ComposedChart>
               </ResponsiveContainer>
             ) : (
@@ -352,7 +357,7 @@ export default function Dashboard() {
         </div>
 
         {/* Category donut */}
-        <div className="card flex flex-col">
+        <div className="glass-card flex flex-col">
           <div className="card-header">
             <div>
               <p className="section-title">Product Categories</p>
@@ -375,7 +380,7 @@ export default function Dashboard() {
                       labelLine={false}
                     >
                       {charts.sales_distribution.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        <Cell key={i} fill={chart.ramp[i % chart.ramp.length]} />
                       ))}
                       <DonutLabel total={totalProducts} />
                     </Pie>
@@ -390,7 +395,7 @@ export default function Dashboard() {
               {charts?.sales_distribution?.slice(0, 5).map((item, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: chart.ramp[i % chart.ramp.length] }} />
                     <span className="text-xs text-gray-600 dark:text-slate-300 truncate">{item.name}</span>
                   </div>
                   <span className="text-xs font-semibold text-gray-700 dark:text-slate-200 tabular ml-2">{item.value}</span>
@@ -405,7 +410,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {/* Top products */}
-        <div className="card">
+        <div className="glass-card">
           <div className="card-header">
             <div>
               <p className="section-title">Top Products</p>
@@ -429,7 +434,7 @@ export default function Dashboard() {
                         </div>
                         <div className="h-1.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
                           <div className="h-full rounded-full transition-all duration-700"
-                            style={{ width: `${pct}%`, background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                            style={{ width: `${pct}%`, background: chart.ramp[i % chart.ramp.length] }} />
                         </div>
                       </div>
                     </div>
@@ -446,7 +451,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent transactions */}
-        <div className="card">
+        <div className="glass-card">
           <div className="card-header">
             <div>
               <p className="section-title">Recent Activity</p>

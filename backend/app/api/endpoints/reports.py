@@ -35,6 +35,7 @@ def get_sales_report(
     start_date = get_date_range(timeframe, tz_offset)
 
     sales_query = db.query(
+        models.Transaction.id,
         models.Transaction.date,
         models.Transaction.transaction_id,
         models.Transaction.order_no,
@@ -72,6 +73,7 @@ def get_sales_report(
         profit = round(sale_p - cost_p, 2)
 
         items.append({
+            "id": row.id,
             "date": utc_date_to_local(row.date, tz_offset) if row.date else None,
             "transaction_id": row.transaction_id,
             "order_no": row.order_no,
@@ -289,6 +291,7 @@ def search_customer_report(
 @router.get("/csv/{report_type}")
 def download_report_csv(
     report_type: str,
+    tz_offset: int = Query(5, description="Client UTC offset in hours (e.g. 5 for PKT)"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ):

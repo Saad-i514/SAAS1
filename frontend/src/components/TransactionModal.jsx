@@ -25,6 +25,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
       return `${year}-${month}-${day}`;
     })(),
     supplier_id: '',
+    product_id: '',
     product_name: initialProduct || '',
     quantity: 1,
     unit_price: 0,
@@ -49,10 +50,15 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
       ]);
       setSuppliers(suppRes.data);
       setProducts(prodRes.data);
+      // Resolve a pre-selected product name (from Products page) to its id.
+      if (initialProduct) {
+        const match = prodRes.data.find(p => p.name === initialProduct);
+        if (match) setFormData(prev => ({ ...prev, product_id: String(match.id), product_name: match.name }));
+      }
     } catch (err) {
       console.error('Failed to load modal data:', err);
     }
-  }, []);
+  }, [initialProduct]);
 
   useEffect(() => {
     if (isOpen) {
@@ -71,17 +77,17 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
     setFormData(prev => ({ ...prev, debit: parseFloat(total.toFixed(2)) }));
   }, [formData.quantity, formData.unit_price, formData.discount]);
 
-  const handleProductChange = (productName) => {
-    const product = products.find(p => p.name === productName);
+  const handleProductChange = (productId) => {
+    const product = products.find(p => String(p.id) === String(productId));
     const autoPrice = product
       ? (formData.type === 'sale' || formData.type === 'reverse' ? product.sale_price : product.product_price)
       : 0;
-    setFormData(prev => ({ ...prev, product_name: productName, unit_price: autoPrice || 0 }));
+    setFormData(prev => ({ ...prev, product_id: productId, product_name: product ? product.name : '', unit_price: autoPrice || 0 }));
   };
 
   const handleTypeChange = (type) => {
     setFormData(prev => {
-      const product = products.find(p => p.name === prev.product_name);
+      const product = products.find(p => String(p.id) === String(prev.product_id));
       const autoPrice = product
         ? (type === 'sale' || type === 'reverse' ? product.sale_price : product.product_price)
         : prev.unit_price;
@@ -121,7 +127,7 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
 
     // Validate stock for sales
     if (formData.type === 'sale') {
-      const product = products.find(p => p.name === formData.product_name);
+      const product = products.find(p => String(p.id) === String(formData.product_id));
       if (product && product.in_hand_qty < qty) {
         setError(`Insufficient stock. Available: ${product.in_hand_qty} units`);
         setLoading(false);
@@ -157,11 +163,11 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
 
   const activeType = TX_TYPES.find(t => t.value === formData.type);
   const colors = colorMap[activeType?.color || 'indigo'];
-  const selectedProduct = products.find(p => p.name === formData.product_name);
+  const selectedProduct = products.find(p => String(p.id) === String(formData.product_id));
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[95vh] sm:max-h-[92vh] overflow-y-auto">
+      <div className="bg-[#faf6ee] dark:bg-[#1a1613] rounded-2xl shadow-2xl w-full max-w-lg max-h-[95vh] sm:max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100">
           <div>
@@ -276,13 +282,13 @@ function TransactionModal({ isOpen, onClose, onSuccess, initialProduct }) {
                 <select
                   required
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
-                  value={formData.product_name}
+                  value={formData.product_id}
                   onChange={e => handleProductChange(e.target.value)}
                 >
                   <option value="">Select product...</option>
                   {products.map(p => (
-                    <option key={p.id} value={p.name}>
-                      {p.name} — {p.in_hand_qty} in stock
+                    <option key={p.id} value={p.id}>
+                      {p.name}{p.article_no ? ` (${p.article_no})` : ''} — {p.in_hand_qty} in stock
                     </option>
                   ))}
                 </select>

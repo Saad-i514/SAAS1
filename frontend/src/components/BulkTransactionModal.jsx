@@ -17,7 +17,14 @@ const colorMap = {
   orange:  { active: 'bg-orange-50 border-orange-400 text-orange-700',  icon: 'text-orange-600',  btn: 'bg-orange-600 hover:bg-orange-700' },
 };
 
-const emptyItem = () => ({ product_name: '', quantity: 1, unit_price: 0, discount: 0 });
+let _uidSeq = 0;
+const newUid = () =>
+  (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `row-${Date.now()}-${_uidSeq++}`;
+
+// product_id is the source of truth for a row's product (names are NOT unique in the DB).
+const emptyItem = () => ({ uid: newUid(), product_id: '', product_name: '', quantity: 1, unit_price: 0, discount: 0 });
 
 function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
   const [txType, setTxType]           = useState('sale');
@@ -73,16 +80,18 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
   const handleTypeChange = (type) => {
     setTxType(type);
     setItems(prev => prev.map(item => {
-      const p = products.find(p => p.name === item.product_name);
+      const p = products.find(p => String(p.id) === String(item.product_id));
       if (!p) return item;
       return { ...item, unit_price: type === 'sale' || type === 'reverse' ? p.sale_price : p.product_price };
     }));
   };
 
-  const handleProductChange = (idx, productName) => {
-    const p = products.find(pr => pr.name === productName);
+  const handleProductChange = (idx, productId) => {
+    const p = products.find(pr => String(pr.id) === String(productId));
     const price = p ? (txType === 'sale' || txType === 'reverse' ? p.sale_price : p.product_price) : 0;
-    setItems(prev => prev.map((item, i) => i === idx ? { ...item, product_name: productName, unit_price: price || 0 } : item));
+    setItems(prev => prev.map((item, i) => i === idx
+      ? { ...item, product_id: productId, product_name: p ? p.name : '', unit_price: price || 0 }
+      : item));
   };
 
   const updateItem = (idx, field, value) => {
@@ -102,9 +111,9 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
     // Client-side stock check for sales
     if (txType === 'sale') {
       for (const item of items) {
-        const p = products.find(pr => pr.name === item.product_name);
+        const p = products.find(pr => String(pr.id) === String(item.product_id));
         if (p && p.in_hand_qty < parseInt(item.quantity)) {
-          setError(`Insufficient stock for "${item.product_name}". Available: ${p.in_hand_qty}, Requested: ${item.quantity}`);
+          setError(`Insufficient stock for "${p.name}". Available: ${p.in_hand_qty}, Requested: ${item.quantity}`);
           return;
         }
       }
@@ -112,7 +121,7 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
 
     // Validate all rows
     for (const item of items) {
-      if (!item.product_name) { setError('All rows must have a product selected.'); return; }
+      if (!item.product_id) { setError('All rows must have a product selected.'); return; }
       const qty = parseInt(item.quantity) || 0;
       const price = parseFloat(item.unit_price) || 0;
       const disc = parseFloat(item.discount) || 0;
@@ -167,7 +176,7 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[96vh] overflow-y-auto">
+      <div className="bg-[#faf6ee] dark:bg-[#1a1613] rounded-2xl shadow-2xl w-full max-w-3xl max-h-[96vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100">
           <div>
@@ -263,17 +272,17 @@ function BulkTransactionModal({ isOpen, onClose, onSuccess }) {
 
               <div className="divide-y divide-gray-100">
                 {items.map((item, idx) => {
-                  const prod = products.find(p => p.name === item.product_name);
+                  const prod = products.find(p => String(p.id) === String(item.product_id));
                   const stockWarning = txType === 'sale' && prod && prod.in_hand_qty < parseInt(item.quantity || 0);
                   const lineAmt = lineTotal(item);
                   return (
-                    <div key={idx} className={`px-4 py-3 grid grid-cols-12 gap-2 items-center ${stockWarning ? 'bg-red-50' : ''}`}>
+                    <div key={item.uid} className={`px-4 py-3 grid grid-cols-12 gap-2 items-center ${stockWarning ? 'bg-red-50' : ''}`}>
                       <div className="col-span-4">
                         <select required className={`w-full px-2 py-2 border rounded-lg text-sm outline-none transition-all ${stockWarning ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50 focus:border-violet-500'}`}
-                          value={item.product_name} onChange={e => handleProductChange(idx, e.target.value)}>
+                          value={item.product_id} onChange={e => handleProductChange(idx, e.target.value)}>
                           <option value="">Select product...</option>
                           {products.map(p => (
-                            <option key={p.id} value={p.name}>{p.name}</option>
+                            <option key={p.id} value={p.id}>{p.name}{p.article_no ? ` (${p.article_no})` : ''}</option>
                           ))}
                         </select>
                         {stockWarning && (
